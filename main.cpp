@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <random>
+#include <chrono>
 
 // ************************************
 // *         DEFINE STATEMENTS
@@ -762,6 +763,140 @@ U64 rook_relevant_occupancy_count[64] = {
     12, 11, 11, 11, 11, 11, 11, 12
 };
 
+constexpr U64 rook_magic_numbers[64]={
+16861477631133754784ULL,
+9226229863768817664ULL,
+3009530492724994048ULL,
+9871890315676612772ULL,
+3746995186610812561ULL,
+5303443514653054384ULL,
+6629299962185321259ULL,
+18014398664287142384ULL,
+9239247224952377280ULL,
+11021715666858873848ULL,
+11288054566953680000ULL,
+6198266637175586253ULL,
+8886446485401409312ULL,
+13792273939133507006ULL,
+10209097338454088328ULL,
+939938770548152360ULL,
+967395684969562445ULL,
+17500617899759367104ULL,
+3946010892647255916ULL,
+17695073944278505104ULL,
+4225925387494006820ULL,
+10837626292015269112ULL,
+5388526168531013696ULL,
+14070760362983172601ULL,
+17627427326968965304ULL,
+12459516451419616902ULL,
+17936825775319702914ULL,
+17881776202918657033ULL,
+6949209410793383632ULL,
+763846094254352192ULL,
+17438043585709764702ULL,
+6227874420841536598ULL,
+8801253302600728590ULL,
+6489561825227571264ULL,
+3993203065575440291ULL,
+9744371551933824912ULL,
+6320128162252455626ULL,
+8908945432659363540ULL,
+17319806063003827870ULL,
+6683219427338485918ULL,
+14187007370942236672ULL,
+7249400190686014464ULL,
+12817245760438488064ULL,
+2449762114465308672ULL,
+17615241619825360872ULL,
+1609515934689000964ULL,
+9255697949914274203ULL,
+6960852168971386878ULL,
+13136286363524990848ULL,
+11388274310517686952ULL,
+13028577380405632896ULL,
+16412966622872368448ULL,
+15723374838478313984ULL,
+17589813948151731968ULL,
+17376362101946595776ULL,
+6780873210883844608ULL,
+4621995543674158449ULL,
+11042530484907111652ULL,
+2654150856195851185ULL,
+13515924020234560886ULL,
+574449045545912970ULL,
+10144399182667008800ULL,
+13220108586653601308ULL,
+14127277893002786146ULL
+};
+
+constexpr U64 bishop_magic_numbers[64] = {
+12665815193747855712ULL,
+13760656084831037714ULL,
+16272094792681210142ULL,
+13368926780955000096ULL,
+1556556325807955539ULL,
+10806111999454265309ULL,
+9520144617438797472ULL,
+7539377601979263499ULL,
+3203808786227533723ULL,
+13263474186726736855ULL,
+3505291155603160552ULL,
+479495783949534457ULL,
+6078755480378322684ULL,
+1991659624897937847ULL,
+2371371466326444039ULL,
+15930630787331477355ULL,
+16792338303483192095ULL,
+14714649215925744732ULL,
+10394335150295276576ULL,
+15087066372911249266ULL,
+1090621740511396397ULL,
+13235510092834146851ULL,
+13739377213692090303ULL,
+15990652592520309291ULL,
+13675232840501923845ULL,
+6356936889931969051ULL,
+1136184261587617163ULL,
+16116265470528716792ULL,
+11413210998708840448ULL,
+16748385592186044396ULL,
+9240143186574181092ULL,
+12484174918678052734ULL,
+7502688684385238578ULL,
+15491802614822905854ULL,
+10220159652150128384ULL,
+6649515360485776384ULL,
+13167390499016089604ULL,
+18165278455095885958ULL,
+2219082739512571644ULL,
+13023330344447230149ULL,
+15935738385715241221ULL,
+8596777687673824891ULL,
+16799623492155653851ULL,
+3092963225783385076ULL,
+16025473213158726080ULL,
+2931008992088813824ULL,
+6398547471469152108ULL,
+17101962274211422650ULL,
+16617005887574240231ULL,
+2409378999403424718ULL,
+8498372614566757487ULL,
+6627441450131470957ULL,
+9607596497890312533ULL,
+2482116703851626913ULL,
+17414550648859544583ULL,
+4010511164182427023ULL,
+12365010403423189754ULL,
+6833333058002200316ULL,
+15850925770170965022ULL,
+17950061800758251080ULL,
+1598642771418586136ULL,
+4745952012322462143ULL,
+1826267829063732909ULL,
+11530367390298939442ULL
+};
+
 // not in use
 void set_relevant_occupancy_count_tables(){
     // set relevant occupancy count tables
@@ -776,33 +911,41 @@ void set_relevant_occupancy_count_tables(){
     }
 }
 
-void generate_magic_numbers(){
+void generate_magic_numbers(bool rook){
+    // random number generator
+    constexpr U64 SEED = 123456789ULL;
+    std::mt19937_64 gen(SEED);
+    std::uniform_int_distribution<U64> dist(0, ~0ULL);
+    
     for (int square = 0; square < 64; square++){
-        
-        // random nu,ber generator
-        constexpr U64 SEED = 123456789ULL;
-        std::mt19937_64 gen(SEED);
-        std::uniform_int_distribution<U64> dist(0, ~0ULL);
-
         // !tmp
         U64 att = 0ULL;
+        U64 time = 0;
         
-        for(int try_index = 0; try_index < 1000000; try_index++){
+        // auto start = std::chrono::high_resolution_clock::now();
+
+        // tmp
+        U64 magic_number = 0;
+        int try_index = 0;
+        for(try_index = 0; try_index < 10'000'000; try_index++){
             // generate new magic number
-            U64 magic_number = dist(gen);
+            magic_number = dist(gen);
             // std::cout << magic_number << "\n";
             bool fail = false;
 
             U64 attack_table[4096] = {0};
             
-            for(int variation = 0; (variation < 4096) && !fail; variation++){
+            for(int variation = 0; (variation < (rook ? 4096 : 512)) && !fail; variation++){
                 // todo
                 att++;
 
                 U64 relevant_occupancy = 0ULL;
                 int index = 0;
 
-                U64 occupation_mask = rook_relevant_occupancy(square);
+                U64 occupation_mask = rook ? 
+                rook_relevant_occupancy(square) : 
+                bishop_relevant_occupancy(square);
+
                 while(occupation_mask){
                     int mask_bit = std::countr_zero(occupation_mask);
                     
@@ -813,17 +956,17 @@ void generate_magic_numbers(){
                     index++;
                 }
                 
-                
-                int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
-    
-                // !
-                // todo
-                // rook atacks operate on global board state
-                // so it always return the same value
+                int magic_index = 0;
+                if(rook)
+                    magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
+                else
+                    magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
 
+                // set relevant occupancy to board
                 both_occupancy_bitboard = relevant_occupancy;
                 // oparates on both_occupancies
-                U64 attacks = calculate_rook_attacks(square);
+                U64 attacks = rook ? calculate_rook_attacks(square) : calculate_bishop_attacks(square);
+
                 if(attack_table[magic_index] && attack_table[magic_index] != attacks){
                     // failed! other magic number
                     fail = true;
@@ -837,12 +980,21 @@ void generate_magic_numbers(){
             if(!fail){
                 // todo
                 // magic number is correct
-                std::cout << "magic_number: " << magic_number << "\n";
-                std::cout << "iter: " << try_index << "\n";
-                std::cout << "attempts: " << att << "\n";
+                
                 break;
             }
         }
+        // auto stop = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        // time += duration.count();
+        
+        std::cout << magic_number << "ULL,\n";
+        // std::cout << "iter: " << try_index << "\n";
+        // std::cout << "attempts: " << att << "\n";
+        // std::cout << "duration: " << time/1000000.0 << "[s]\n";
+        // std::cout << "ratio: " << ((double)time)/att << "[us]\n";
+        // std::cout << "\n";
+
     }
 }
 
@@ -853,7 +1005,7 @@ int main(int argc, char const *argv[])
     U64 board = 0;
    
     // print_bitboard_bits());
-    generate_magic_numbers();
+    // generate_magic_numbers(false);
 
     return 0;
 }
