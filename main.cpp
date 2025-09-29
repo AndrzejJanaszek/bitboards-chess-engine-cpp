@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 // ************************************
-//          DEFINE STATEMENTS
+// *         DEFINE STATEMENTS
 // ************************************
 
 #define U64 uint64_t
@@ -14,7 +14,7 @@
 
 
 // ************************************
-//               ENUMS
+// *              ENUMS
 // ************************************
 
 enum class COLOR {
@@ -85,7 +85,7 @@ char ascii_pieces[] = {
 
 
 // ************************************
-//              BITBOARDS
+// *             BITBOARDS
 // ************************************
 
 // bitboards; index: PIECE enum
@@ -109,7 +109,7 @@ int halfmove_counter = 0;
 int fullmove_number = 1;
 
 // ************************************
-//              FUNCTIONS
+// *            FUNCTIONS
 // ************************************
 
 char rank_names[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
@@ -245,7 +245,95 @@ void load_fen(std::string fen){
 }
 
 // ************************************
-//            VISUALISATION
+// *         MOVE GENERATION
+// ************************************
+
+const U64 A_FILE_MASK = 0x101010101010101ULL;
+const U64 B_FILE_MASK = A_FILE_MASK << 1;
+const U64 C_FILE_MASK = A_FILE_MASK << 2;
+const U64 D_FILE_MASK = A_FILE_MASK << 3;
+const U64 E_FILE_MASK = A_FILE_MASK << 4;
+const U64 F_FILE_MASK = A_FILE_MASK << 5;
+const U64 G_FILE_MASK = A_FILE_MASK << 6;
+const U64 H_FILE_MASK = A_FILE_MASK << 7;
+
+const U64 RANK_1_MASK = 0x000000000000ffULL;
+const U64 RANK_2_MASK = RANK_1_MASK << (8*1);
+const U64 RANK_3_MASK = RANK_1_MASK << (8*2);
+const U64 RANK_4_MASK = RANK_1_MASK << (8*3);
+const U64 RANK_5_MASK = RANK_1_MASK << (8*4);
+const U64 RANK_6_MASK = RANK_1_MASK << (8*5);
+const U64 RANK_7_MASK = RANK_1_MASK << (8*6);
+const U64 RANK_8_MASK = RANK_1_MASK << (8*7);
+
+const U64 NOT_A_FILE = (~0Ull) ^ A_FILE_MASK;
+const U64 NOT_AB_FILE = (~0Ull) ^ (A_FILE_MASK | B_FILE_MASK);
+const U64 NOT_H_FILE = (~0Ull) ^ H_FILE_MASK;
+const U64 NOT_GH_FILE = (~0Ull) ^ (G_FILE_MASK | H_FILE_MASK);
+
+U64 pawn_attaks(int square, int color){
+    U64 piece_position = 1Ull << square;
+    if(color == static_cast<int>(COLOR::white)){
+        // bit shift and mask overflowing bits
+        return ((piece_position << 9) & NOT_A_FILE) | ((piece_position << 7) & NOT_H_FILE);
+    }
+    
+    // bit shift and mask overflowing bits
+    return ((piece_position >> 7) & NOT_A_FILE) | ((piece_position >> 9) & NOT_H_FILE);
+}
+
+U64 king_attacks(int square){
+    U64 piece_position = 1Ull << square;
+
+    // left    right
+    // <<7 <<8 <<9
+    // >>1  K  <<1
+    // >>9 >>8 >>7
+    // left side moves mask with NOT_H_RANK
+    // right side moves mask with NOT_A_RANK
+
+    U64 attacks =
+    // up
+    (piece_position << 8) |
+    //down
+    (piece_position >> 8) |
+    //right
+    (((piece_position << 9) | (piece_position << 1) | (piece_position >> 7)) & NOT_A_FILE) |
+    //left
+    (((piece_position << 7) | (piece_position >> 1) | (piece_position >> 9)) & NOT_H_FILE);
+
+    return attacks;
+    
+}
+
+U64 knight_attacks(int square){
+    U64 piece_position = 1Ull << square;
+
+    //| GH |  H |   |  A | AB |
+    //|    |<<15| - |<<17|    |
+    //|<<6 |    | - |    |<<10|
+    //|    |    | N |    |    |
+    //|>>10|    | - |    |>>6 |
+    //|    |>>17| - |>>15|    |
+    // moves must be masked to prevent overflowing moves
+
+    U64 attacks =
+    // A mask
+    (((piece_position << 17) | (piece_position >> 15)) & NOT_A_FILE) |
+    // AB mask
+    (((piece_position << 10) | (piece_position >> 6)) & NOT_AB_FILE) |
+    // H mask
+    (((piece_position << 15) | (piece_position >> 17)) & NOT_H_FILE) |
+    // GH mask
+    (((piece_position << 6) | (piece_position >> 10)) & NOT_GH_FILE);
+
+    return attacks;
+    
+}
+
+
+// ************************************
+// *          VISUALISATION
 // ************************************
 
 void print_board_of_strings(const std::vector<std::string> &board_strings){
@@ -276,6 +364,10 @@ void print_bitboard_bits(const U64 &bitboard){
         str_board[i] = ((bitboard & (1ULL << i)) ? "1" : "0");
 
     print_board_of_strings(str_board);
+
+    std::cout << "bitboard as number: \n";
+    std::cout << "hex: 0x" << std::hex << bitboard << "\n";
+    std::cout << "dec: " << std::dec << bitboard << "ULL\n";
 }
 
 void print_board_ascii(){
@@ -388,16 +480,16 @@ void print_game_state(){
 }
 
 // ************************************
-//               MAIN
+// *             MAIN
 // ************************************
 
 int main(int argc, char const *argv[])
 {
     U64 board = 0;
     
-    load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    // load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    print_game_state();
+    // print_game_state();
     // print_bitboard_bits(bitboards[0]);
     
     // std::cout << std::countr_zero(bitboards[0]);
@@ -406,7 +498,15 @@ int main(int argc, char const *argv[])
     // print_board_unicode();
     // print_bitboard_bits(bitboards[static_cast<int>(PIECE::P)]);
 
+    // set_bit(board, static_cast<int>(SQUARE::e4));
+    // print_bitboard_bits(board);
+    // print_bitboard_bits((board >> 8));
+    // print_bitboard_bits((board >> 7));
+    // print_bitboard_bits((board >> 9));
 
+    print_bitboard_bits(
+        knight_attacks(static_cast<int>(SQUARE::a8))
+    );
 
     return 0;
 }
