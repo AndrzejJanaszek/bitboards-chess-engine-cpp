@@ -1,7 +1,9 @@
 #include <iostream>
 #include <cstdint>
+#include <string>
 #include <bit>
 #include <vector>
+#include <unordered_map>
 
 // ************************************
 //          DEFINE STATEMENTS
@@ -15,6 +17,10 @@
 //               ENUMS
 // ************************************
 
+enum class COLOR {
+    white, black
+};
+
 enum class SQUARE {
   a1, b1, c1, d1, e1, f1, g1, h1,
   a2, b2, c2, d2, e2, f2, g2, h2,
@@ -25,6 +31,28 @@ enum class SQUARE {
   a7, b7, c7, d7, e7, f7, g7, h7,
   a8, b8, c8, d8, e8, f8, g8, h8
 };
+
+const std::string square_str[] = {
+    "a1","b1","c1","d1","e1","f1","g1","h1",
+    "a2","b2","c2","d2","e2","f2","g2","h2",
+    "a3","b3","c3","d3","e3","f3","g3","h3",
+    "a4","b4","c4","d4","e4","f4","g4","h4",
+    "a5","b5","c5","d5","e5","f5","g5","h5",
+    "a6","b6","c6","d6","e6","f6","g6","h6",
+    "a7","b7","c7","d7","e7","f7","g7","h7",
+    "a8","b8","c8","d8","e8","f8","g8","h8"
+};
+
+inline int str_square_to_index(std::string square){
+    if(square.length() < 2){
+        printf("Error: str_square_to_index(std::string square) square length < 1");
+        exit(-1);
+    }
+    return (square[0] - 'a') + (square[1] - '1') * 8;
+}
+
+
+
 
 enum class PIECE{
     // pawn, rook, knight, bishop, queen, king
@@ -63,6 +91,23 @@ char ascii_pieces[] = {
 // bitboards; index: PIECE enum
 U64 bitboards[12] = {0};
 
+// castle system - each bit describes one possibility
+// | white queenside | white kingside | black queenside | black kingside |
+// |      bit 0/1    |     bit 0/1    |     bit 0/1     |    bit 0/1     |
+int castles = 0;
+
+// from enum COLOR -> white = 0, black = 1
+int color_to_move = -1;
+
+// from enum 0->63 square | -1 none
+int en_passant_square = -1;
+
+// halfmoves since last capture or pawn advance for fifty-move rule
+int halfmove_counter = 0;
+
+// Fullmove number: The number of the full moves. It starts at 1 and is incremented after Black's move.
+int fullmove_number = 1;
+
 // ************************************
 //              FUNCTIONS
 // ************************************
@@ -73,13 +118,139 @@ inline void set_bit(U64 &bitboard, int square){
     bitboard |= (1ULL << square);
 }
 
+void clear_bitboards(){
+    for(U64 &b : bitboards)
+        b = 0ULL;
+}
+
+void load_fen(std::string fen){
+    // fen fragments
+    // 1. piece data
+    // 2. active color
+    // 3. castling
+    // 4. en passant
+    // 5. Halfmove clock
+    // 6. Fullmove number
+
+    // split fen into 6 fragments (fields)
+    std::vector<std::string> fen_fragments(6, "");
+    int fragment_index = 0;
+    for(char &c : fen){
+        if(c == ' '){
+            fragment_index++;
+        }
+        else{
+            fen_fragments[fragment_index] += c;
+        }
+    }
+
+    // *** 1.st fragment ***
+    // split 1. fragment into ranks
+    // !!! ORDER REVERSED !!!
+    // fen construction: rank8/rank7/../rank2/rank1 from black to white
+    // !position_fragments are from rank1 to rank8
+
+    std::vector<std::string> position_fragments(8, "");
+    fragment_index = 7;
+    for(char &c : fen_fragments[0]){
+        if(c == '/'){
+            fragment_index--;
+        }
+        else{
+            position_fragments[fragment_index] += c;
+        }
+    }
+
+
+    // clear bitboards
+    clear_bitboards();
+
+    // set bitboards with pieces
+    for(int rank = 0; rank < 8; rank++){
+        for(int file = 0; file < 8; file++){
+            char c = position_fragments[rank][file];
+            // if digit <1;8> skip that number of squares
+            // file is incremented so we need to add only X-1 squares (files)
+            if('0' < c && c < '9') 
+                file+=(c-'0')-1;
+            else
+                set_bit(bitboards[piece_ascii_to_number[c]], rank*8+file);
+        }
+    }
+
+    // *** 2.st fragment ***
+    // set other game state variables
+    if(fen_fragments[1] == "w")
+        color_to_move = static_cast<int>(COLOR::white);
+    else if(fen_fragments[1] == "b")
+        color_to_move = static_cast<int>(COLOR::black);
+    else{
+        // todo rise exception
+        printf("Error: fen color to move not w or b");
+        exit(-1);
+    }
+
+    // *** 3.st fragment ***
+    // set castling availability (mask)
+    castles = 0;
+    for (const char &c : fen_fragments[2])
+    {
+        switch (c)
+        {
+            // set white queenside
+        case 'Q':
+            castles |= 0b1000;
+            break;
+
+            // set white kingside
+        case 'K':
+            castles |= 0b0100;
+            break;
+
+            // set black queenside
+        case 'q':
+            castles |= 0b0010;
+            break;
+
+            // set black kingside
+        case 'k':
+            castles |= 0b0001;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    // *** 4.st fragment ***
+    // set en passant square
+    if(fen_fragments[3] == "-")
+        en_passant_square = -1;
+    else{
+        if(fen_fragments[3].length() > 2){
+            // todo rise exception
+            printf("Error: fen en passant square not '-' and length > 2");
+            exit(-1);
+        }
+    
+        en_passant_square = str_square_to_index( fen_fragments[3] );
+    }
+    
+    // *** 5.st fragment ***
+    // set halfmove counter
+    halfmove_counter = std::stoi(fen_fragments[4]);
+    // *** 6.st fragment ***
+    // set fullmove number
+    fullmove_number = std::stoi(fen_fragments[5]);
+}
+
 // ************************************
 //            VISUALISATION
 // ************************************
 
 void print_board_of_strings(const std::vector<std::string> &board_strings){
     // print bitboard bits with rank and file descriptions
-    printf("\n-------------------------\n");
+    // printf("-------------------------\n");
     printf("    a b c d e f g h\n");
     printf("\n");
     for (int  rank = 7; rank >= 0; rank--){
@@ -93,7 +264,7 @@ void print_board_of_strings(const std::vector<std::string> &board_strings){
     }
     printf("\n");
     printf("    a b c d e f g h\n");
-    printf("\n-------------------------\n");
+    // printf("-------------------------\n");
 }
 
 void print_bitboard_bits(const U64 &bitboard){
@@ -170,6 +341,51 @@ void print_board_unicode(){
     print_board_of_strings(pieces);
 }
 
+void print_game_state(){
+
+    printf("#############################\n");
+    printf("#      GAME STATUS INFO     #\n");
+    printf("#############################\n");
+
+    printf("\n");
+    printf("----------------------------- \n");
+    printf("----------- BOARD ----------- \n");
+    printf("----------------------------- \n");
+    printf("\n");
+
+    print_board_unicode();
+
+    printf("\n");
+    printf("----------------------------- \n");
+    printf("--------- VARIABLES ---------\n");
+    printf("----------------------------- \n");
+    printf("\n");
+
+    printf("- Color to move:\n");
+    printf("\tint: %d\n", color_to_move);
+    printf("\tstr: %s\n", color_to_move ? "black" : "white");
+
+    printf("- Castling availability:\n");
+    printf("\tbin: %c%c%c%c\n", 
+        (castles & 1) ? '1' : '0',
+        (castles & 2) ? '1' : '0',
+        (castles & 4) ? '1' : '0',
+        (castles & 8) ? '1' : '0'
+    );
+    printf("\tstr: %c%c%c%c\n", 
+        (castles & 1) ? 'Q' : '-',
+        (castles & 2) ? 'K' : '-',
+        (castles & 4) ? 'q' : '-',
+        (castles & 8) ? 'k' : '-'
+    );
+    printf("- En passant square: \n");
+    printf("\tint: %d\n", en_passant_square);
+    std::cout << "\tstr: " << ((en_passant_square < 0) ? "-" : square_str[en_passant_square]) << std::endl;
+    printf("- Halfmove counter: %d\n", halfmove_counter);
+    printf("- Fullmove number: %d\n", fullmove_number);
+
+    printf("---------------------------\n");
+}
 
 // ************************************
 //               MAIN
@@ -178,18 +394,17 @@ void print_board_unicode(){
 int main(int argc, char const *argv[])
 {
     U64 board = 0;
-    set_bit(bitboards[static_cast<int>(PIECE::P)], static_cast<int>(SQUARE::a2));
-    set_bit(bitboards[static_cast<int>(PIECE::P)], static_cast<int>(SQUARE::b2));
-    set_bit(bitboards[static_cast<int>(PIECE::P)], static_cast<int>(SQUARE::c2));
-    set_bit(bitboards[static_cast<int>(PIECE::P)], static_cast<int>(SQUARE::d2));
+    
+    load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
+    print_game_state();
     // print_bitboard_bits(bitboards[0]);
     
     // std::cout << std::countr_zero(bitboards[0]);
     // print_board_ascii();
-    print_board_ascii();
-    print_board_unicode();
-    print_bitboard_bits(bitboards[static_cast<int>(PIECE::P)]);
+    // print_board_ascii();
+    // print_board_unicode();
+    // print_bitboard_bits(bitboards[static_cast<int>(PIECE::P)]);
 
 
 
