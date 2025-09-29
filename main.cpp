@@ -266,6 +266,28 @@ const U64 RANK_6_MASK = RANK_1_MASK << (8*5);
 const U64 RANK_7_MASK = RANK_1_MASK << (8*6);
 const U64 RANK_8_MASK = RANK_1_MASK << (8*7);
 
+const U64 FILE_MASK_ARR[] = {
+    A_FILE_MASK,
+    B_FILE_MASK,
+    C_FILE_MASK,
+    D_FILE_MASK,
+    E_FILE_MASK,
+    F_FILE_MASK,
+    G_FILE_MASK,
+    H_FILE_MASK
+};
+
+const U64 RANK_MASK_ARR[] = {
+    RANK_1_MASK,
+    RANK_2_MASK,
+    RANK_3_MASK,
+    RANK_4_MASK,
+    RANK_5_MASK,
+    RANK_6_MASK,
+    RANK_7_MASK,
+    RANK_8_MASK
+};
+
 const U64 NOT_A_FILE = (~0Ull) ^ A_FILE_MASK;
 const U64 NOT_AB_FILE = (~0Ull) ^ (A_FILE_MASK | B_FILE_MASK);
 const U64 NOT_H_FILE = (~0Ull) ^ H_FILE_MASK;
@@ -283,14 +305,14 @@ U64 pawn_attaks(int square, int color){
 }
 
 U64 king_attacks(int square){
-    U64 piece_position = 1Ull << square;
-
     // left    right
     // <<7 <<8 <<9
     // >>1  K  <<1
     // >>9 >>8 >>7
     // left side moves mask with NOT_H_RANK
     // right side moves mask with NOT_A_RANK
+
+    U64 piece_position = 1Ull << square;
 
     U64 attacks =
     // up
@@ -303,7 +325,6 @@ U64 king_attacks(int square){
     (((piece_position << 7) | (piece_position >> 1) | (piece_position >> 9)) & NOT_H_FILE);
 
     return attacks;
-    
 }
 
 U64 knight_attacks(int square){
@@ -483,6 +504,102 @@ void print_game_state(){
 // *             MAIN
 // ************************************
 
+U64 rook_relevant_occupancy(int square){
+    int rank = square / 8;
+    int file = square % 8;
+    U64 border = RANK_1_MASK ^ RANK_8_MASK ^ A_FILE_MASK ^ H_FILE_MASK;
+    // border:
+    // 8   0 1 1 1 1 1 1 0   8
+    // 7   1 0 0 0 0 0 0 1   7
+    // 6   1 0 0 0 0 0 0 1   6
+    // 5   1 0 0 0 0 0 0 1   5
+    // 4   1 0 0 0 0 0 0 1   4
+    // 3   1 0 0 0 0 0 0 1   3
+    // 2   1 0 0 0 0 0 0 1   2
+    // 1   0 1 1 1 1 1 1 0   1
+
+    // if square on border:
+    if (rank == 0 || rank == 7){
+        border = border ^ RANK_MASK_ARR[rank];
+    }
+    if (file == 0 || file == 7){
+        border = border ^ FILE_MASK_ARR[file];
+    }
+    // XOR these edges (on square position); here square = a1
+    // 8   1 1 1 1 1 1 1 0   8
+    // 7   0 0 0 0 0 0 0 1   7
+    // 6   0 0 0 0 0 0 0 1   6
+    // 5   0 0 0 0 0 0 0 1   5
+    // 4   0 0 0 0 0 0 0 1   4
+    // 3   0 0 0 0 0 0 0 1   3
+    // 2   0 0 0 0 0 0 0 1   2
+    // 1   0 0 0 0 0 0 0 1   1
+
+    U64 relevant_occupancy = 
+    // make cross on square position (vertical and horizontal, actually '+' sign)
+    (RANK_MASK_ARR[rank] | FILE_MASK_ARR[file]) 
+    // remove border from relevant ocupancies
+    & ~(border) 
+    // remove square
+    & ~(1ULL << square);
+
+    return relevant_occupancy;
+}
+
+U64 bishop_relevant_occupancy(int square){
+    const U64 border = RANK_1_MASK ^ RANK_8_MASK ^ A_FILE_MASK ^ H_FILE_MASK;
+    U64 relevant_occupancy = 0ULL;
+
+    // *up-right direction
+    U64 cursor = 1ULL << square;
+    // 46 is last interesting square
+    for(int sq = square; (sq / 8 < 6) & (sq % 8 < 6); sq+=9){
+        // move cursor
+        cursor <<= 9;
+
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+
+    // *up-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 47 is last interesting square
+    for(int sq = square; (sq / 8 < 6) & (sq % 8 > 1); sq+=7){
+        // move cursor
+        cursor <<= 7;
+
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+
+    // *down-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 18 is first interesting square
+    for(int sq = square; (sq / 8 > 1) & (sq % 8 > 1); sq-=9){
+        // move cursor
+        cursor >>= 9;
+
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+
+    // *down-right direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 21 is first interesting square
+    for(int sq = square; (sq / 8 > 1) & (sq % 8 < 6); sq-=7){
+        // move cursor
+        cursor >>= 7;
+        
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+    
+    return relevant_occupancy;
+}
+
 int main(int argc, char const *argv[])
 {
     U64 board = 0;
@@ -500,13 +617,21 @@ int main(int argc, char const *argv[])
 
     // set_bit(board, static_cast<int>(SQUARE::e4));
     // print_bitboard_bits(board);
+    print_bitboard_bits(bishop_relevant_occupancy(5));
+    print_bitboard_bits(bishop_relevant_occupancy(23));
+    print_bitboard_bits(bishop_relevant_occupancy(11));
+    print_bitboard_bits(bishop_relevant_occupancy(18));
+    print_bitboard_bits(bishop_relevant_occupancy(46));
+    print_bitboard_bits(bishop_relevant_occupancy(37));
+    print_bitboard_bits(bishop_relevant_occupancy(53));
+
     // print_bitboard_bits((board >> 8));
     // print_bitboard_bits((board >> 7));
     // print_bitboard_bits((board >> 9));
 
-    print_bitboard_bits(
-        knight_attacks(static_cast<int>(SQUARE::a8))
-    );
+    // print_bitboard_bits(
+    //     knight_attacks(static_cast<int>(SQUARE::a8))
+    // );
 
     return 0;
 }
