@@ -91,6 +91,11 @@ char ascii_pieces[] = {
 // bitboards; index: PIECE enum
 U64 bitboards[12] = {0};
 
+// 0 - white; 1 - black
+U64 color_occupancy_bitboards[2] = {0};
+
+U64 both_occupancy_bitboard = 0ULL;
+
 // castle system - each bit describes one possibility
 // | white queenside | white kingside | black queenside | black kingside |
 // |      bit 0/1    |     bit 0/1    |     bit 0/1     |    bit 0/1     |
@@ -352,6 +357,137 @@ U64 knight_attacks(int square){
     
 }
 
+U64 calculate_bishop_attacks(int square){
+    U64 attacks = 0ULL;
+
+    // *up-right direction
+    U64 cursor = 1ULL << square;
+    // 46 is last interesting square
+    for(int sq = square; (sq / 8 < 7) & (sq % 8 < 7); sq+=9){
+        // move cursor
+        cursor <<= 9;
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // *up-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 47 is last interesting square
+    for(int sq = square; (sq / 8 < 7) & (sq % 8 > 0); sq+=7){
+        // move cursor
+        cursor <<= 7;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // *down-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 18 is first interesting square
+    for(int sq = square; (sq / 8 > 0) & (sq % 8 > 0); sq-=9){
+        // move cursor
+        cursor >>= 9;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // *down-right direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 21 is first interesting square
+    for(int sq = square; (sq / 8 > 0) & (sq % 8 < 7); sq-=7){
+        // move cursor
+        cursor >>= 7;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+    
+    return attacks;
+}
+
+U64 calculate_rook_attacks(int square){
+    U64 attacks = 0ULL;
+    // * up
+    U64 cursor = 1ULL << square;
+    for(int sq = square; (sq / 8 < 7); sq+=8){
+        // move cursor
+        cursor <<= 8;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // * down
+    // reset cursor
+    cursor = 1ULL << square;
+    for(int sq = square; (sq / 8 > 0); sq-=8){
+        // move cursor
+        cursor >>= 8;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // * left
+    // reset cursor
+    cursor = 1ULL << square;
+    for(int sq = square; (sq % 8 > 0); sq-=1){
+        // move cursor
+        cursor >>= 1;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // * right
+    // reset cursor
+    cursor = 1ULL << square;
+    for(int sq = square; (sq % 8 < 7); sq+=1){
+        // move cursor
+        cursor <<= 1;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    return attacks;
+}
 
 // ************************************
 // *          VISUALISATION
@@ -547,7 +683,6 @@ U64 rook_relevant_occupancy(int square){
 }
 
 U64 bishop_relevant_occupancy(int square){
-    const U64 border = RANK_1_MASK ^ RANK_8_MASK ^ A_FILE_MASK ^ H_FILE_MASK;
     U64 relevant_occupancy = 0ULL;
 
     // *up-right direction
@@ -592,7 +727,7 @@ U64 bishop_relevant_occupancy(int square){
     for(int sq = square; (sq / 8 > 1) & (sq % 8 < 6); sq-=7){
         // move cursor
         cursor >>= 7;
-        
+
         // save relevant square
         relevant_occupancy |= cursor;
     }
@@ -616,14 +751,15 @@ int main(int argc, char const *argv[])
     // print_bitboard_bits(bitboards[static_cast<int>(PIECE::P)]);
 
     // set_bit(board, static_cast<int>(SQUARE::e4));
-    // print_bitboard_bits(board);
-    print_bitboard_bits(bishop_relevant_occupancy(5));
-    print_bitboard_bits(bishop_relevant_occupancy(23));
-    print_bitboard_bits(bishop_relevant_occupancy(11));
-    print_bitboard_bits(bishop_relevant_occupancy(18));
-    print_bitboard_bits(bishop_relevant_occupancy(46));
-    print_bitboard_bits(bishop_relevant_occupancy(37));
-    print_bitboard_bits(bishop_relevant_occupancy(53));
+    print_bitboard_bits(board);
+    set_bit(board, static_cast<int>(SQUARE::e2));
+    set_bit(board, static_cast<int>(SQUARE::e5));
+    set_bit(board, static_cast<int>(SQUARE::a4));
+    set_bit(board, static_cast<int>(SQUARE::g4));
+
+    both_occupancy_bitboard = board;
+
+    print_bitboard_bits(calculate_rook_attacks(static_cast<int>(SQUARE::e4)));
 
     // print_bitboard_bits((board >> 8));
     // print_bitboard_bits((board >> 7));
