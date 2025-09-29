@@ -4,6 +4,7 @@
 #include <bit>
 #include <vector>
 #include <unordered_map>
+#include <random>
 
 // ************************************
 // *         DEFINE STATEMENTS
@@ -121,6 +122,10 @@ char rank_names[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
 
 inline void set_bit(U64 &bitboard, int square){
     bitboard |= (1ULL << square);
+}
+
+inline void pop_bit(U64 &bitboard){
+    bitboard &= (bitboard-1);
 }
 
 void clear_bitboards(){
@@ -735,39 +740,120 @@ U64 bishop_relevant_occupancy(int square){
     return relevant_occupancy;
 }
 
+U64 bishop_relevant_occupancy_count[64] = {
+    6, 5, 5, 5, 5, 5, 5, 6, 
+    5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    6, 5, 5, 5, 5, 5, 5, 6
+};
+
+U64 rook_relevant_occupancy_count[64] = {
+    12, 11, 11, 11, 11, 11, 11, 12, 
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    12, 11, 11, 11, 11, 11, 11, 12
+};
+
+// not in use
+void set_relevant_occupancy_count_tables(){
+    // set relevant occupancy count tables
+    for(int i = 0; i < 64; i++){
+        // count of set bits (1 bits)
+        bishop_relevant_occupancy_count[i] = std::popcount(rook_relevant_occupancy(i));
+        rook_relevant_occupancy_count[i] = std::popcount(bishop_relevant_occupancy(i));
+
+        // std::cout << std::popcount(bishop_relevant_occupancy(i)) << ", ";
+        // if((i+1)%8 == 0) 
+        //     std::cout << "\n";
+    }
+}
+
+void generate_magic_numbers(){
+    for (int square = 0; square < 64; square++){
+        
+        // random nu,ber generator
+        constexpr U64 SEED = 123456789ULL;
+        std::mt19937_64 gen(SEED);
+        std::uniform_int_distribution<U64> dist(0, ~0ULL);
+
+        // !tmp
+        U64 att = 0ULL;
+        
+        for(int try_index = 0; try_index < 1000000; try_index++){
+            // generate new magic number
+            U64 magic_number = dist(gen);
+            // std::cout << magic_number << "\n";
+            bool fail = false;
+
+            U64 attack_table[4096] = {0};
+            
+            for(int variation = 0; (variation < 4096) && !fail; variation++){
+                // todo
+                att++;
+
+                U64 relevant_occupancy = 0ULL;
+                int index = 0;
+
+                U64 occupation_mask = rook_relevant_occupancy(square);
+                while(occupation_mask){
+                    int mask_bit = std::countr_zero(occupation_mask);
+                    
+                    // get bit from variation and put under set (1) bit in relevant_occupancy
+                    relevant_occupancy |= ((variation & (1ULL << index)) << mask_bit);
+                    
+                    pop_bit(occupation_mask);
+                    index++;
+                }
+                
+                
+                int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
+    
+                // !
+                // todo
+                // rook atacks operate on global board state
+                // so it always return the same value
+
+                both_occupancy_bitboard = relevant_occupancy;
+                // oparates on both_occupancies
+                U64 attacks = calculate_rook_attacks(square);
+                if(attack_table[magic_index] && attack_table[magic_index] != attacks){
+                    // failed! other magic number
+                    fail = true;
+                    break;
+                }
+                else{
+                    attack_table[magic_index] = attacks;
+                }
+            }
+            
+            if(!fail){
+                // todo
+                // magic number is correct
+                std::cout << "magic_number: " << magic_number << "\n";
+                std::cout << "iter: " << try_index << "\n";
+                std::cout << "attempts: " << att << "\n";
+                break;
+            }
+        }
+    }
+}
+
+#include <bitset>
+
 int main(int argc, char const *argv[])
 {
     U64 board = 0;
-    
-    // load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
-    // print_game_state();
-    // print_bitboard_bits(bitboards[0]);
-    
-    // std::cout << std::countr_zero(bitboards[0]);
-    // print_board_ascii();
-    // print_board_ascii();
-    // print_board_unicode();
-    // print_bitboard_bits(bitboards[static_cast<int>(PIECE::P)]);
-
-    // set_bit(board, static_cast<int>(SQUARE::e4));
-    print_bitboard_bits(board);
-    set_bit(board, static_cast<int>(SQUARE::e2));
-    set_bit(board, static_cast<int>(SQUARE::e5));
-    set_bit(board, static_cast<int>(SQUARE::a4));
-    set_bit(board, static_cast<int>(SQUARE::g4));
-
-    both_occupancy_bitboard = board;
-
-    print_bitboard_bits(calculate_rook_attacks(static_cast<int>(SQUARE::e4)));
-
-    // print_bitboard_bits((board >> 8));
-    // print_bitboard_bits((board >> 7));
-    // print_bitboard_bits((board >> 9));
-
-    // print_bitboard_bits(
-    //     knight_attacks(static_cast<int>(SQUARE::a8))
-    // );
+   
+    // print_bitboard_bits());
+    generate_magic_numbers();
 
     return 0;
 }
