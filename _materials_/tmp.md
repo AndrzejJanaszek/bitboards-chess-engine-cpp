@@ -203,14 +203,18 @@ We can split all pieces into 2 categories:
   - queen
 
 #### JUMPING
-<img src="./img/attacks_pawn.png" alt="drawing" width="200"/>
-<img src="./img/attacks_knight.png" alt="drawing" width="200"/>
-<img src="./img/attacks_king.png" alt="drawing" width="200"/>
+<div>
+  <img src="./img/attacks_pawn.png" alt="drawing" width="200"/>
+  <img src="./img/attacks_knight.png" alt="drawing" width="200"/>
+  <img src="./img/attacks_king.png" alt="drawing" width="200"/>
+</div>
 
 #### SLIDING
+<div>
 <img src="./img/attacks_rook.png" alt="drawing" width="200"/>
 <img src="./img/attacks_bishop.png" alt="drawing" width="200"/>
 <img src="./img/attacks_queen.png" alt="drawing" width="200"/>
+</div>
 
 ## MOVE GENERATION
 
@@ -219,10 +223,10 @@ We can split all pieces into 2 categories:
 They just move to a square. They can't be blocked. If destination square is empty or with an enemy piece on it, jumping piece can move there.
 
 Thanks to bitboards (bitboards are just numbers - bits) it is simply a bit shift.
-
+<div>
 <img src="./img/bit_shift_king_wiki.png" alt="drawing"/>
 <img src="./img/bit_shift_king.png" alt="drawing" width="200"/>
-
+</div>
 ```cpp
 // for white pawn
 U64 pawn_possition;
@@ -315,8 +319,10 @@ First thing first, remember that we look at all attacked squares, no matter is t
 <br>
 That little ditail is very helpfull for us. 
 
+<div>
 <img src="./img/relevant_squares_rook_all.png" alt="drawing" width="250"/>
 <img src="./img/relevant_squares_rook_optimised.png" alt="drawing" width="250"/>
+</div>
 
 If we were to consider all square that rook see (left picture), we would have to consider 2^14 = 16384 posible blockers configurations, however thanks to that little ditail mentions above we have to consider only 2^12 = 4096, which is 4 times smaller number. <br>
 Squares that we take into consideration are called **relevant squares** or **relevant occupation**. <br>
