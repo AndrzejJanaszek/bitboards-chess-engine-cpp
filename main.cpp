@@ -1003,6 +1003,12 @@ void generate_magic_numbers(bool rook){
 int main(int argc, char const *argv[])
 {
     U64 board = 0;
+
+    // set_bit(board, (int)SQUARE::e4);
+    // print_bitboard_bits(board);
+    print_bitboard_bits(NOT_A_FILE);
+    print_bitboard_bits(NOT_H_FILE);
+
    
     // print_bitboard_bits());
     // generate_magic_numbers(false);
