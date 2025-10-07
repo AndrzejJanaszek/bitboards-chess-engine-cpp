@@ -227,6 +227,9 @@ Thanks to bitboards (bitboards are just numbers - bits) it is simply a bit shift
 <img src="./img/bit_shift_king_wiki.png" alt="drawing"/>
 <img src="./img/bit_shift_king.png" alt="drawing" width="200"/>
 </div>
+
+<br>
+
 ```cpp
 // for white pawn
 U64 pawn_possition;
@@ -308,30 +311,33 @@ U64 pawn_attaks(int square, int color){
 ```
 
 ### SLIDING PIECES (ROOK, BISHOP, QUEEN)
-
+#### Introduction
 Generating sliding pieces attacks is not as simple as jumping pieces, because other pieces may block their path. <br>
 Naive version of algorithm is to loop through each square in all directions and check for blockers (blocking pieces). <br>
 The problem with this solution is that it is slow. If we want to make it faster we can make something called lookup tables; Lookup tables contains attacks for all possible board configurations (to be more precise for all possible blocker placements/configurations). We sacrifice space (bigger memory usage) for time (faster algorithm). It's called space-time tradeoff. <br>
+#### Relevant Squares / Relevant Occupation
+So how many configurations of blockers are there? <br>
 <br>
-So how many configurations of blockers are there?<br>
-<br>
-First thing first, remember that we look at all attacked squares, no matter is there a friendly piece or enemy, because in both scenarious we count this square as attacked and occupied. The distinction between friendly and enemy piece will be made by move generator, now we're just writing functions that gives us attacked squares. <br>
+First thing first, remember that we look at all attacked squares, no matter is there a friendly or enemy piece, because in both scenarious we count this square as attacked and occupied. The distinction between friendly and enemy piece will be made by move generator, now we're just writing functions that gives us attacked squares. <br>
 <br>
 That little ditail is very helpfull for us. 
+
 
 <div>
 <img src="./img/relevant_squares_rook_all.png" alt="drawing" width="250"/>
 <img src="./img/relevant_squares_rook_optimised.png" alt="drawing" width="250"/>
 </div>
 
-If we were to consider all square that rook see (left picture), we would have to consider 2^14 = 16384 posible blockers configurations, however thanks to that little ditail mentions above we have to consider only 2^12 = 4096, which is 4 times smaller number. <br>
+If we were to consider all squares that rook sees (left picture), we would have to consider 2^14 = 16384 posible blockers configurations, however thanks to that little ditail mentioned above we have to consider only 2^12 = 4096, which is 4 times smaller number. <br>
 Squares that we take into consideration are called **relevant squares** or **relevant occupation**. <br>
 <br>
-We can skip board edges (rank 1st and 8th and file A and B) while taking into consideration, since it doesn't matter if there is a piece or not. Even if there is a piece it will not block anything because that is an edge, ther are not futher squares in that direction. <br>
+We can skip board edges (1st and 8th ranks and A and B files) while taking into consideration, since it doesn't matter if there is a piece or not. Even if there is a piece it will not block anything because that is an edge, ther are not futher squares in that direction. <br>
 <br>
 If you have problem understanding this look at this video where Sebastian Lague explains it with visualisation (timestamp added): [Coding Adventure: Making a Better Chess Bot](https://youtu.be/_vqlIPDR2TU?si=tvZWBGOiS-pFTVqb&t=1966)
 
-Number of relevant squres depends on square. In corners there are 12 (right picture), on the edges 11 and in the center 10. You can see that on picture belowe (blue = 12, green = 11, yellow = 10)<br>
+#### Relevant Occupancy Count
+
+Number of *relevant squres* depends on square. For rook, in corners there are 12 (right picture), on the edges 11 and in the center 10. You can see that on picture belowe (blue = 12, green = 11, yellow = 10)<br>
 <img src="./img/relevant_squares_rook_colored.png" alt="drawing" width="250"/>
 
 For bishop it is very similar. <br>
@@ -361,3 +367,35 @@ U64 rook_relevant_occupancy_count[64] = {
     12, 11, 11, 11, 11, 11, 11, 12
 };
 ```
+
+#### Magic Numbers (not that magical)
+
+Now that we know what *relevant occupancy* and *relevant occupancy count* is we can move on to magic numbers. <br>
+How do they work and how we generate them. <br>
+
+Our main goal is to make fast lookup table - table with all attacks onfigurations. <br>
+
+First thing that comes to mind might be map<square_index><both_occupancy_bitboard>. Implementation of std::map is hash table. So for each lookup these steps would occour:
+- passing 2 arguments: int and U64
+- calling hash function (takes some time to move arguments and function on stack, and to calculate hash)
+- check for collisions
+- resolve collision
+- return value
+
+That's a lot of unnecesary load out. We need something even faster than that. <br>
+You could ask yourself: why not make table 64 x MAX_U64 (arr[64][MAX_U64]). Easy answer is that it would be enourmously big, MAX_U64 is 18,446,744,073,709,551,615. We dont have that much memmory.
+<br>
+
+Our solution is to geenrate magic numbers. Because these tables are precomputed we can make a perfect hashing function, and our magic numbers are used as part of hahing function.
+
+We need magic number for each square.
+
+Our hash function:
+
+(relevant_occupancy * magic_number) >> (64 - revelant_occupancy_count)
+
+U64 relevant_occupancy -> we use mask on current possition to select only blockers in eyesight of our piece (rook or bishop).
+
+U64 magic_number -> randomly generated
+
+relevant_occupancy_cout -> number of relevant squares for current square
