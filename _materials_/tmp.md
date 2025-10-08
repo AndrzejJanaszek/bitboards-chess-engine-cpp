@@ -375,6 +375,7 @@ How do they work and how we generate them. <br>
 
 Our main goal is to make fast lookup table - table with all attacks onfigurations. <br>
 
+**Hash table** <br>
 First thing that comes to mind might be map<square_index><both_occupancy_bitboard>. Implementation of std::map is hash table. So for each lookup these steps would occour:
 - passing 2 arguments: int and U64
 - calling hash function (takes some time to move arguments and function on stack, and to calculate hash)
@@ -383,19 +384,37 @@ First thing that comes to mind might be map<square_index><both_occupancy_bitboar
 - return value
 
 That's a lot of unnecesary load out. We need something even faster than that. <br>
-You could ask yourself: why not make table 64 x MAX_U64 (arr[64][MAX_U64]). Easy answer is that it would be enourmously big, MAX_U64 is 18,446,744,073,709,551,615. We dont have that much memmory.
+
+**Contiguous array** <br>
+You could ask yourself: why not make table 64 x MAX_U64 (`arr[64][MAX_U64]`). Easy answer is that it would be enourmously big, MAX_U64 is **18,446,744,073,709,551,615**. We dont have that much memmory.
 <br>
 
-Our solution is to geenrate magic numbers. Because these tables are precomputed we can make a perfect hashing function, and our magic numbers are used as part of hahing function.
+**Magic bitboards - perfect hashing alogrithm** <br>
+>**Magic Bitboards**, a multiply-right-shift perfect hashing algorithm to index an attack bitboard database - which leaves both line-attacks of bishop or rook in one run.
+source: [Magic Bitboards (Chess Programming Wiki)](https://www.chessprogramming.org/Magic_Bitboards)
 
-We need magic number for each square.
+Magic bitboards is solution that uses contiguous array like in example above, but its size is drasticly redused. Instead of using U64 as second argument (dimension) we use int (512 elements for bishop and 4096 for rook).
 
-Our hash function:
+So lookup tables look like this.
 
-(relevant_occupancy * magic_number) >> (64 - revelant_occupancy_count)
+```
+// attacks lookup tables
+U64 bishop_attacks[64][512]
+U64 rook_attacks[64][4096]
 
-U64 relevant_occupancy -> we use mask on current possition to select only blockers in eyesight of our piece (rook or bishop).
+table[square_index][magic_index]
+```
 
-U64 magic_number -> randomly generated
+**Magic index - hash from perfect hasing**
 
-relevant_occupancy_cout -> number of relevant squares for current square
+```
+magic_index = (relevant_occupancy * magic_number) >> (64 - relevant_occupancy_count)
+```
+
+
+
+relevant_occupancy is U64 bitboard 
+
+relevant_occupancy = both_occupancies & mask[square_index]
+magic_number = randomly generated (in precomputation phase later acces from table. One magic number per square)
+relevant_occupancy_count = relevant_occupancy_count[square_index]
