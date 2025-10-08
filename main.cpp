@@ -55,7 +55,6 @@ inline int str_square_to_index(std::string square){
 
 
 
-
 enum class PIECE{
     // pawn, rook, knight, bishop, queen, king
     // white pieces
@@ -362,6 +361,8 @@ U64 knight_attacks(int square){
     return attacks;
     
 }
+
+
 
 U64 calculate_bishop_attacks(int square){
     U64 attacks = 0ULL;
@@ -764,137 +765,137 @@ U64 rook_relevant_occupancy_count[64] = {
 };
 
 constexpr U64 rook_magic_numbers[64]={
-16861477631133754784ULL,
-9226229863768817664ULL,
-3009530492724994048ULL,
-9871890315676612772ULL,
-3746995186610812561ULL,
-5303443514653054384ULL,
-6629299962185321259ULL,
-18014398664287142384ULL,
-9239247224952377280ULL,
-11021715666858873848ULL,
-11288054566953680000ULL,
-6198266637175586253ULL,
-8886446485401409312ULL,
-13792273939133507006ULL,
-10209097338454088328ULL,
-939938770548152360ULL,
-967395684969562445ULL,
-17500617899759367104ULL,
-3946010892647255916ULL,
-17695073944278505104ULL,
-4225925387494006820ULL,
-10837626292015269112ULL,
-5388526168531013696ULL,
-14070760362983172601ULL,
-17627427326968965304ULL,
-12459516451419616902ULL,
-17936825775319702914ULL,
-17881776202918657033ULL,
-6949209410793383632ULL,
-763846094254352192ULL,
-17438043585709764702ULL,
-6227874420841536598ULL,
-8801253302600728590ULL,
-6489561825227571264ULL,
-3993203065575440291ULL,
-9744371551933824912ULL,
-6320128162252455626ULL,
-8908945432659363540ULL,
-17319806063003827870ULL,
-6683219427338485918ULL,
-14187007370942236672ULL,
-7249400190686014464ULL,
-12817245760438488064ULL,
-2449762114465308672ULL,
-17615241619825360872ULL,
-1609515934689000964ULL,
-9255697949914274203ULL,
-6960852168971386878ULL,
-13136286363524990848ULL,
-11388274310517686952ULL,
-13028577380405632896ULL,
-16412966622872368448ULL,
-15723374838478313984ULL,
-17589813948151731968ULL,
-17376362101946595776ULL,
-6780873210883844608ULL,
-4621995543674158449ULL,
-11042530484907111652ULL,
-2654150856195851185ULL,
-13515924020234560886ULL,
-574449045545912970ULL,
-10144399182667008800ULL,
-13220108586653601308ULL,
-14127277893002786146ULL
+2630102260767531144ULL,
+234222385128030208ULL,
+2522025687206854848ULL,
+9295436263664394496ULL,
+144132917837431297ULL,
+72060892977299458ULL,
+2377973725069967364ULL,
+4935946291246022784ULL,
+14988120309188682368ULL,
+13835339805145236128ULL,
+563294092001664ULL,
+140771856519168ULL,
+864972637841918992ULL,
+311311392995017736ULL,
+9241667957585739780ULL,
+4611967511666237696ULL,
+141287247396864ULL,
+81074139686879232ULL,
+9289774013612096ULL,
+4758618155430993988ULL,
+581105639242139648ULL,
+2315132783057698856ULL,
+2308974688928264ULL,
+145243287012311956ULL,
+35736275533840ULL,
+27024365874841185ULL,
+9876623514467860992ULL,
+9043487433953280ULL,
+83316629621965824ULL,
+10133107785076744ULL,
+1170953512490768664ULL,
+270217085743825092ULL,
+18014983723942048ULL,
+4629701172853213184ULL,
+2380720164489400961ULL,
+18155204725708800ULL,
+18384934011930625ULL,
+563018706470924ULL,
+5188234766356316418ULL,
+144115480234295429ULL,
+158604554960896ULL,
+2305913515665539080ULL,
+634418746163218ULL,
+144546196902412416ULL,
+9083065691340816ULL,
+38562123350605826ULL,
+78830594389442561ULL,
+563509389819908ULL,
+6341209031621804288ULL,
+1162492204661486080ULL,
+4611864690174726656ULL,
+2310504942944813952ULL,
+2704415974416810112ULL,
+5794428426125440ULL,
+12738572326455541888ULL,
+4964998989312ULL,
+21445701569880321ULL,
+81135166333980801ULL,
+162164775263424577ULL,
+32932641001048069ULL,
+23081154786100234ULL,
+9223653529018174081ULL,
+36045848307632132ULL,
+576480698173554754ULL
 };
 
 constexpr U64 bishop_magic_numbers[64] = {
-12665815193747855712ULL,
-13760656084831037714ULL,
-16272094792681210142ULL,
-13368926780955000096ULL,
-1556556325807955539ULL,
-10806111999454265309ULL,
-9520144617438797472ULL,
-7539377601979263499ULL,
-3203808786227533723ULL,
-13263474186726736855ULL,
-3505291155603160552ULL,
-479495783949534457ULL,
-6078755480378322684ULL,
-1991659624897937847ULL,
-2371371466326444039ULL,
-15930630787331477355ULL,
-16792338303483192095ULL,
-14714649215925744732ULL,
-10394335150295276576ULL,
-15087066372911249266ULL,
-1090621740511396397ULL,
-13235510092834146851ULL,
-13739377213692090303ULL,
-15990652592520309291ULL,
-13675232840501923845ULL,
-6356936889931969051ULL,
-1136184261587617163ULL,
-16116265470528716792ULL,
-11413210998708840448ULL,
-16748385592186044396ULL,
-9240143186574181092ULL,
-12484174918678052734ULL,
-7502688684385238578ULL,
-15491802614822905854ULL,
-10220159652150128384ULL,
-6649515360485776384ULL,
-13167390499016089604ULL,
-18165278455095885958ULL,
-2219082739512571644ULL,
-13023330344447230149ULL,
-15935738385715241221ULL,
-8596777687673824891ULL,
-16799623492155653851ULL,
-3092963225783385076ULL,
-16025473213158726080ULL,
-2931008992088813824ULL,
-6398547471469152108ULL,
-17101962274211422650ULL,
-16617005887574240231ULL,
-2409378999403424718ULL,
-8498372614566757487ULL,
-6627441450131470957ULL,
-9607596497890312533ULL,
-2482116703851626913ULL,
-17414550648859544583ULL,
-4010511164182427023ULL,
-12365010403423189754ULL,
-6833333058002200316ULL,
-15850925770170965022ULL,
-17950061800758251080ULL,
-1598642771418586136ULL,
-4745952012322462143ULL,
-1826267829063732909ULL,
-11530367390298939442ULL
+18089199962039328ULL,
+1914034534219796745ULL,
+298364592021577728ULL,
+9811102870857056258ULL,
+23656027031470080ULL,
+216322471387734018ULL,
+16447717604732452874ULL,
+141013576321156ULL,
+144125496137908480ULL,
+10309055952273608ULL,
+4569854181384ULL,
+6918657169554441728ULL,
+2307076687298822272ULL,
+1162201008177745ULL,
+288241444551020608ULL,
+1126040098054145ULL,
+76561284128180224ULL,
+4620693252076519941ULL,
+600539574386696ULL,
+14637282927583233ULL,
+4617878485397014689ULL,
+2392567377297664ULL,
+9232959789021077504ULL,
+7246573277601140768ULL,
+310915569082839040ULL,
+4756375168888112128ULL,
+6759797525385728ULL,
+1130298024722944ULL,
+844493666402322ULL,
+4625197096490782754ULL,
+649081571206303776ULL,
+1135250052878592ULL,
+2324178602578413584ULL,
+2487271344219104308ULL,
+583050770514048ULL,
+4505800798634112ULL,
+380589370333266176ULL,
+149535729455104ULL,
+290772455629587712ULL,
+2317173484054127108ULL,
+14412645843645513728ULL,
+4611916924996587554ULL,
+577023848302548996ULL,
+9259684512206423040ULL,
+36345593957716096ULL,
+18157352217806920ULL,
+289782920963424320ULL,
+144415535147401728ULL,
+2612651902462328836ULL,
+1152961091723608576ULL,
+422354333730944ULL,
+689543849984ULL,
+4645711645900800ULL,
+5260362772021051393ULL,
+22553191107404353ULL,
+74327004363177984ULL,
+3513409146772987906ULL,
+9308940713376942080ULL,
+4652218451589865769ULL,
+211107845277696ULL,
+41099814439814912ULL,
+2305843627723596032ULL,
+5197440255661244933ULL,
+1155179937326440833ULL
 };
 
 // not in use
@@ -916,6 +917,8 @@ void generate_magic_numbers(bool rook){
     constexpr U64 SEED = 123456789ULL;
     std::mt19937_64 gen(SEED);
     std::uniform_int_distribution<U64> dist(0, ~0ULL);
+
+    int correct_numbers = 0;
     
     for (int square = 0; square < 64; square++){
         // !tmp
@@ -927,15 +930,16 @@ void generate_magic_numbers(bool rook){
         // tmp
         U64 magic_number = 0;
         int try_index = 0;
-        for(try_index = 0; try_index < 10'000'000; try_index++){
-            // generate new magic number
-            magic_number = dist(gen);
+        for(try_index = 0; try_index < 1'000'000; try_index++){
+            magic_number = dist(gen) & dist(gen) & dist(gen);
             // std::cout << magic_number << "\n";
             bool fail = false;
 
             U64 attack_table[4096] = {0};
-            
-            for(int variation = 0; (variation < (rook ? 4096 : 512)) && !fail; variation++){
+            int relevant_bits = rook ? rook_relevant_occupancy_count[square]
+                                     : bishop_relevant_occupancy_count[square];
+            int variations = 1 << relevant_bits;
+            for (int variation = 0; variation < variations && !fail; variation++) {
                 // todo
                 att++;
 
@@ -950,12 +954,15 @@ void generate_magic_numbers(bool rook){
                     int mask_bit = std::countr_zero(occupation_mask);
                     
                     // get bit from variation and put under set (1) bit in relevant_occupancy
-                    relevant_occupancy |= ((variation & (1ULL << index)) << mask_bit);
+                    // relevant_occupancy |= ( !!(variation & (1ULL << index)) << mask_bit );
+                    U64 bit = (variation & (1ULL << index)) ? 1ULL : 0ULL;
+                    relevant_occupancy |= (bit << mask_bit);
                     
                     pop_bit(occupation_mask);
                     index++;
                 }
                 
+                // relevant occupancy contains pieces configuration on rook/bishop sight ray
                 int magic_index = 0;
                 if(rook)
                     magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
@@ -966,6 +973,9 @@ void generate_magic_numbers(bool rook){
                 both_occupancy_bitboard = relevant_occupancy;
                 // oparates on both_occupancies
                 U64 attacks = rook ? calculate_rook_attacks(square) : calculate_bishop_attacks(square);
+                
+                // reset both_occupancy_bitboard
+                both_occupancy_bitboard = 0ULL;
 
                 if(attack_table[magic_index] && attack_table[magic_index] != attacks){
                     // failed! other magic number
@@ -980,6 +990,7 @@ void generate_magic_numbers(bool rook){
             if(!fail){
                 // todo
                 // magic number is correct
+                correct_numbers++;
                 
                 break;
             }
@@ -996,22 +1007,88 @@ void generate_magic_numbers(bool rook){
         // std::cout << "\n";
 
     }
+
+    printf("correct numbers: %d\n",correct_numbers);
 }
 
 #include <bitset>
+U64 rook_lookup_attacks[64][4096];
+U64 bishop_lookup_attacks[64][512];
+
+U64 rook_attacks(int square){
+    U64 magic_number = rook_magic_numbers[square];
+    U64 relevant_occupancy = rook_relevant_occupancy(square) & both_occupancy_bitboard;
+    int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
+
+    return rook_lookup_attacks[square][magic_index];
+}
+
+U64 bishop_attacks(int square){
+    U64 magic_number = bishop_magic_numbers[square];
+    U64 relevant_occupancy = bishop_relevant_occupancy(square) & both_occupancy_bitboard;
+    int magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
+
+    return bishop_lookup_attacks[square][magic_index];
+}
+
+
+
+void init_attacks_lookup_tables(bool rook){
+    for(int square = 0; square < 64; square++){
+        for(int variation = 0; (variation < (rook ? 4096 : 512)); variation++){
+            U64 relevant_occupancy = 0ULL;
+            int index = 0;
+
+            U64 occupation_mask = rook ? 
+            rook_relevant_occupancy(square) : 
+            bishop_relevant_occupancy(square);
+
+            while(occupation_mask){
+                int mask_bit = std::countr_zero(occupation_mask);
+                
+                // get bit from variation and put under set (1) bit in relevant_occupancy
+                U64 bit = (variation & (1ULL << index)) ? 1ULL : 0ULL;
+                relevant_occupancy |= (bit << mask_bit);
+                
+                pop_bit(occupation_mask);
+                index++;
+            }
+            int magic_index = rook ? 
+            relevant_occupancy * rook_magic_numbers[square] >> (64-rook_relevant_occupancy_count[square]) : 
+            relevant_occupancy * bishop_magic_numbers[square] >> (64-bishop_relevant_occupancy_count[square]);
+
+            // set relevant occupancy to board
+            both_occupancy_bitboard = relevant_occupancy;
+            // oparates on both_occupancies
+            U64 attacks = rook ? calculate_rook_attacks(square) : calculate_bishop_attacks(square);
+
+            if(rook)
+                rook_lookup_attacks[square][magic_index] = attacks;
+            else
+                bishop_lookup_attacks[square][magic_index] = attacks;
+        }   
+    }
+}
+
+//todo: functions (for example init lookup tables) must clear state (both_occupancies)
 
 int main(int argc, char const *argv[])
 {
-    U64 board = 0;
-
-    // set_bit(board, (int)SQUARE::e4);
-    // print_bitboard_bits(board);
-    print_bitboard_bits(NOT_A_FILE);
-    print_bitboard_bits(NOT_H_FILE);
-
-   
-    // print_bitboard_bits());
+    U64 board = 0ULL;
+    
     // generate_magic_numbers(false);
+
+    init_attacks_lookup_tables(true);
+    init_attacks_lookup_tables(false);
+    
+    both_occupancy_bitboard = 0ULL;
+    set_bit(both_occupancy_bitboard, (int)SQUARE::d3);
+    set_bit(both_occupancy_bitboard, (int)SQUARE::a8);
+    set_bit(both_occupancy_bitboard, (int)SQUARE::f5);
+    set_bit(both_occupancy_bitboard, (int)SQUARE::g2);
+
+    U64 ppp = bishop_attacks( (int)SQUARE::e4 );
+    print_bitboard_bits(ppp);
 
     return 0;
 }
