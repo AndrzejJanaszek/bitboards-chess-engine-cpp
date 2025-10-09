@@ -85,7 +85,7 @@ const std::string square_str[] = {
     "a8","b8","c8","d8","e8","f8","g8","h8"
 };
 
-const std::vector<const std::string> unicode_pieces = {
+std::vector<std::string> unicode_pieces = {
     // white pieces
     "♙","♖","♘","♗","♕","♔",
     // black pieces
@@ -467,243 +467,11 @@ void load_fen(std::string fen){
 
 // ------------------------------------------
 
-// not in use
-// todo test
-void print_relevant_occupancy_count_tables(){
-    // set relevant occupancy count tables
-    std::cout << "BISHOP RELEVANT OCCUPANCY COUNT: \n";
-    for(int i = 0; i < 64; i++){
-        // count of set bits (1 bits)
-        std::cout << std::popcount(bishop_relevant_occupancy(i)) << ", ";
-        if((i+1)%8 == 0) 
-            std::cout << "\n";
-    }
-
-    std::cout << "\n\nROOK RELEVANT OCCUPANCY COUNT: \n";
-    for(int i = 0; i < 64; i++){
-        // count of set bits (1 bits)
-        std::cout << std::popcount(rook_relevant_occupancy(i)) << ", ";
-        if((i+1)%8 == 0) 
-            std::cout << "\n";
-    }
-}
-
-void generate_magic_numbers(bool rook){
-    // random number generator
-    constexpr U64 SEED = 123456789ULL;
-    std::mt19937_64 gen(SEED);
-    std::uniform_int_distribution<U64> dist(0, ~0ULL);
-
-    int correct_numbers = 0;
-    
-    for (int square = 0; square < 64; square++){
-        // !tmp
-        U64 att = 0ULL;
-        U64 time = 0;
-        
-        // auto start = std::chrono::high_resolution_clock::now();
-
-        // tmp
-        U64 magic_number = 0;
-        int try_index = 0;
-        for(try_index = 0; try_index < 1'000'000; try_index++){
-            magic_number = dist(gen) & dist(gen) & dist(gen);
-            // std::cout << magic_number << "\n";
-            bool fail = false;
-
-            U64 attack_table[4096] = {0};
-            int relevant_bits = rook ? rook_relevant_occupancy_count[square]
-                                     : bishop_relevant_occupancy_count[square];
-            int variations = 1 << relevant_bits;
-            for (int variation = 0; variation < variations && !fail; variation++) {
-                // todo
-                att++;
-
-                U64 relevant_occupancy = 0ULL;
-                int index = 0;
-
-                U64 occupation_mask = rook ? 
-                rook_relevant_occupancy(square) : 
-                bishop_relevant_occupancy(square);
-
-                while(occupation_mask){
-                    int mask_bit = std::countr_zero(occupation_mask);
-                    
-                    // get bit from variation and put under set (1) bit in relevant_occupancy
-                    // relevant_occupancy |= ( !!(variation & (1ULL << index)) << mask_bit );
-                    U64 bit = (variation & (1ULL << index)) ? 1ULL : 0ULL;
-                    relevant_occupancy |= (bit << mask_bit);
-                    
-                    pop_bit(occupation_mask);
-                    index++;
-                }
-                
-                // relevant occupancy contains pieces configuration on rook/bishop sight ray
-                int magic_index = 0;
-                if(rook)
-                    magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
-                else
-                    magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
-
-                // set relevant occupancy to board
-                both_occupancy_bitboard = relevant_occupancy;
-                // oparates on both_occupancies
-                U64 attacks = rook ? calculate_rook_attacks(square) : calculate_bishop_attacks(square);
-                
-                // reset both_occupancy_bitboard
-                both_occupancy_bitboard = 0ULL;
-
-                if(attack_table[magic_index] && attack_table[magic_index] != attacks){
-                    // failed! other magic number
-                    fail = true;
-                    break;
-                }
-                else{
-                    attack_table[magic_index] = attacks;
-                }
-            }
-            
-            if(!fail){
-                // todo
-                // magic number is correct
-                correct_numbers++;
-                
-                break;
-            }
-        }
-        // auto stop = std::chrono::high_resolution_clock::now();
-        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        // time += duration.count();
-        
-        std::cout << magic_number << "ULL,\n";
-        // std::cout << "iter: " << try_index << "\n";
-        // std::cout << "attempts: " << att << "\n";
-        // std::cout << "duration: " << time/1000000.0 << "[s]\n";
-        // std::cout << "ratio: " << ((double)time)/att << "[us]\n";
-        // std::cout << "\n";
-
-    }
-
-    printf("correct numbers: %d\n",correct_numbers);
-}
-
-void init_attacks_lookup_tables(bool rook){
-    for(int square = 0; square < 64; square++){
-        for(int variation = 0; (variation < (rook ? 4096 : 512)); variation++){
-            U64 relevant_occupancy = 0ULL;
-            int index = 0;
-
-            U64 occupation_mask = rook ? 
-            rook_relevant_occupancy(square) : 
-            bishop_relevant_occupancy(square);
-
-            while(occupation_mask){
-                int mask_bit = std::countr_zero(occupation_mask);
-                
-                // get bit from variation and put under set (1) bit in relevant_occupancy
-                U64 bit = (variation & (1ULL << index)) ? 1ULL : 0ULL;
-                relevant_occupancy |= (bit << mask_bit);
-                
-                pop_bit(occupation_mask);
-                index++;
-            }
-            int magic_index = rook ? 
-            relevant_occupancy * rook_magic_numbers[square] >> (64-rook_relevant_occupancy_count[square]) : 
-            relevant_occupancy * bishop_magic_numbers[square] >> (64-bishop_relevant_occupancy_count[square]);
-
-            // set relevant occupancy to board
-            both_occupancy_bitboard = relevant_occupancy;
-            // oparates on both_occupancies
-            U64 attacks = rook ? calculate_rook_attacks(square) : calculate_bishop_attacks(square);
-
-            if(rook)
-                rook_lookup_attacks[square][magic_index] = attacks;
-            else
-                bishop_lookup_attacks[square][magic_index] = attacks;
-        }   
-    }
-}
-
 //todo: functions (for example init lookup tables) must clear state (both_occupancies)
 
 // ************************************
 // *         ATTACK GENERATION
 // ************************************
-
-U64 pawn_attaks(int square, int color){
-    U64 piece_position = 1Ull << square;
-    if(color == static_cast<int>(COLOR::white)){
-        // bit shift and mask overflowing bits
-        return ((piece_position << 9) & NOT_A_FILE) | ((piece_position << 7) & NOT_H_FILE);
-    }
-    
-    // bit shift and mask overflowing bits
-    return ((piece_position >> 7) & NOT_A_FILE) | ((piece_position >> 9) & NOT_H_FILE);
-}
-
-U64 king_attacks(int square){
-    // left    right
-    // <<7 <<8 <<9
-    // >>1  K  <<1
-    // >>9 >>8 >>7
-    // left side moves mask with NOT_H_RANK
-    // right side moves mask with NOT_A_RANK
-
-    U64 piece_position = 1Ull << square;
-
-    U64 attacks =
-    // up
-    (piece_position << 8) |
-    //down
-    (piece_position >> 8) |
-    //right
-    (((piece_position << 9) | (piece_position << 1) | (piece_position >> 7)) & NOT_A_FILE) |
-    //left
-    (((piece_position << 7) | (piece_position >> 1) | (piece_position >> 9)) & NOT_H_FILE);
-
-    return attacks;
-}
-
-U64 knight_attacks(int square){
-    U64 piece_position = 1Ull << square;
-
-    //| GH |  H |   |  A | AB |
-    //|    |<<15| - |<<17|    |
-    //|<<6 |    | - |    |<<10|
-    //|    |    | N |    |    |
-    //|>>10|    | - |    |>>6 |
-    //|    |>>17| - |>>15|    |
-    // moves must be masked to prevent overflowing moves
-
-    U64 attacks =
-    // A mask
-    (((piece_position << 17) | (piece_position >> 15)) & NOT_A_FILE) |
-    // AB mask
-    (((piece_position << 10) | (piece_position >> 6)) & NOT_AB_FILE) |
-    // H mask
-    (((piece_position << 15) | (piece_position >> 17)) & NOT_H_FILE) |
-    // GH mask
-    (((piece_position << 6) | (piece_position >> 10)) & NOT_GH_FILE);
-
-    return attacks;
-    
-}
-
-U64 rook_attacks(int square){
-    U64 magic_number = rook_magic_numbers[square];
-    U64 relevant_occupancy = rook_relevant_occupancy(square) & both_occupancy_bitboard;
-    int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
-
-    return rook_lookup_attacks[square][magic_index];
-}
-
-U64 bishop_attacks(int square){
-    U64 magic_number = bishop_magic_numbers[square];
-    U64 relevant_occupancy = bishop_relevant_occupancy(square) & both_occupancy_bitboard;
-    int magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
-
-    return bishop_lookup_attacks[square][magic_index];
-}
 
 U64 calculate_bishop_attacks(int square){
     U64 attacks = 0ULL;
@@ -932,6 +700,244 @@ U64 bishop_relevant_occupancy(int square){
     return relevant_occupancy;
 }
 
+U64 pawn_attaks(int square, int color){
+    U64 piece_position = 1Ull << square;
+    if(color == static_cast<int>(COLOR::white)){
+        // bit shift and mask overflowing bits
+        return ((piece_position << 9) & NOT_A_FILE) | ((piece_position << 7) & NOT_H_FILE);
+    }
+    
+    // bit shift and mask overflowing bits
+    return ((piece_position >> 7) & NOT_A_FILE) | ((piece_position >> 9) & NOT_H_FILE);
+}
+
+U64 king_attacks(int square){
+    // left    right
+    // <<7 <<8 <<9
+    // >>1  K  <<1
+    // >>9 >>8 >>7
+    // left side moves mask with NOT_H_RANK
+    // right side moves mask with NOT_A_RANK
+
+    U64 piece_position = 1Ull << square;
+
+    U64 attacks =
+    // up
+    (piece_position << 8) |
+    //down
+    (piece_position >> 8) |
+    //right
+    (((piece_position << 9) | (piece_position << 1) | (piece_position >> 7)) & NOT_A_FILE) |
+    //left
+    (((piece_position << 7) | (piece_position >> 1) | (piece_position >> 9)) & NOT_H_FILE);
+
+    return attacks;
+}
+
+U64 knight_attacks(int square){
+    U64 piece_position = 1Ull << square;
+
+    //| GH |  H |   |  A | AB |
+    //|    |<<15| - |<<17|    |
+    //|<<6 |    | - |    |<<10|
+    //|    |    | N |    |    |
+    //|>>10|    | - |    |>>6 |
+    //|    |>>17| - |>>15|    |
+    // moves must be masked to prevent overflowing moves
+
+    U64 attacks =
+    // A mask
+    (((piece_position << 17) | (piece_position >> 15)) & NOT_A_FILE) |
+    // AB mask
+    (((piece_position << 10) | (piece_position >> 6)) & NOT_AB_FILE) |
+    // H mask
+    (((piece_position << 15) | (piece_position >> 17)) & NOT_H_FILE) |
+    // GH mask
+    (((piece_position << 6) | (piece_position >> 10)) & NOT_GH_FILE);
+
+    return attacks;
+    
+}
+
+U64 rook_attacks(int square){
+    U64 magic_number = rook_magic_numbers[square];
+    U64 relevant_occupancy = rook_relevant_occupancy(square) & both_occupancy_bitboard;
+    int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
+
+    return rook_lookup_attacks[square][magic_index];
+}
+
+U64 bishop_attacks(int square){
+    U64 magic_number = bishop_magic_numbers[square];
+    U64 relevant_occupancy = bishop_relevant_occupancy(square) & both_occupancy_bitboard;
+    int magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
+
+    return bishop_lookup_attacks[square][magic_index];
+}
+
+U64 queen_attacks(int square){
+    return (bishop_attacks(square) | rook_attacks(square));
+}
+
+
+
+// not in use
+// todo test
+void print_relevant_occupancy_count_tables(){
+    // set relevant occupancy count tables
+    std::cout << "BISHOP RELEVANT OCCUPANCY COUNT: \n";
+    for(int i = 0; i < 64; i++){
+        // count of set bits (1 bits)
+        std::cout << std::popcount(bishop_relevant_occupancy(i)) << ", ";
+        if((i+1)%8 == 0) 
+            std::cout << "\n";
+    }
+
+    std::cout << "\n\nROOK RELEVANT OCCUPANCY COUNT: \n";
+    for(int i = 0; i < 64; i++){
+        // count of set bits (1 bits)
+        std::cout << std::popcount(rook_relevant_occupancy(i)) << ", ";
+        if((i+1)%8 == 0) 
+            std::cout << "\n";
+    }
+}
+
+void generate_magic_numbers(bool rook){
+    // random number generator
+    constexpr U64 SEED = 123456789ULL;
+    std::mt19937_64 gen(SEED);
+    std::uniform_int_distribution<U64> dist(0, ~0ULL);
+
+    int correct_numbers = 0;
+    
+    for (int square = 0; square < 64; square++){
+        // !tmp
+        U64 att = 0ULL;
+        U64 time = 0;
+        
+        // auto start = std::chrono::high_resolution_clock::now();
+
+        // tmp
+        U64 magic_number = 0;
+        int try_index = 0;
+        for(try_index = 0; try_index < 1'000'000; try_index++){
+            magic_number = dist(gen) & dist(gen) & dist(gen);
+            // std::cout << magic_number << "\n";
+            bool fail = false;
+
+            U64 attack_table[4096] = {0};
+            int relevant_bits = rook ? rook_relevant_occupancy_count[square]
+                                     : bishop_relevant_occupancy_count[square];
+            int variations = 1 << relevant_bits;
+            for (int variation = 0; variation < variations && !fail; variation++) {
+                // todo
+                att++;
+
+                U64 relevant_occupancy = 0ULL;
+                int index = 0;
+
+                U64 occupation_mask = rook ? 
+                rook_relevant_occupancy(square) : 
+                bishop_relevant_occupancy(square);
+
+                while(occupation_mask){
+                    int mask_bit = std::countr_zero(occupation_mask);
+                    
+                    // get bit from variation and put under set (1) bit in relevant_occupancy
+                    // relevant_occupancy |= ( !!(variation & (1ULL << index)) << mask_bit );
+                    U64 bit = (variation & (1ULL << index)) ? 1ULL : 0ULL;
+                    relevant_occupancy |= (bit << mask_bit);
+                    
+                    pop_bit(occupation_mask);
+                    index++;
+                }
+                
+                // relevant occupancy contains pieces configuration on rook/bishop sight ray
+                int magic_index = 0;
+                if(rook)
+                    magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
+                else
+                    magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
+
+                // set relevant occupancy to board
+                both_occupancy_bitboard = relevant_occupancy;
+                // oparates on both_occupancies
+                U64 attacks = rook ? calculate_rook_attacks(square) : calculate_bishop_attacks(square);
+                
+                // reset both_occupancy_bitboard
+                both_occupancy_bitboard = 0ULL;
+
+                if(attack_table[magic_index] && attack_table[magic_index] != attacks){
+                    // failed! other magic number
+                    fail = true;
+                    break;
+                }
+                else{
+                    attack_table[magic_index] = attacks;
+                }
+            }
+            
+            if(!fail){
+                // todo
+                // magic number is correct
+                correct_numbers++;
+                
+                break;
+            }
+        }
+        // auto stop = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        // time += duration.count();
+        
+        std::cout << magic_number << "ULL,\n";
+        // std::cout << "iter: " << try_index << "\n";
+        // std::cout << "attempts: " << att << "\n";
+        // std::cout << "duration: " << time/1000000.0 << "[s]\n";
+        // std::cout << "ratio: " << ((double)time)/att << "[us]\n";
+        // std::cout << "\n";
+
+    }
+
+    printf("correct numbers: %d\n",correct_numbers);
+}
+
+void init_attacks_lookup_tables(bool rook){
+    for(int square = 0; square < 64; square++){
+        for(int variation = 0; (variation < (rook ? 4096 : 512)); variation++){
+            U64 relevant_occupancy = 0ULL;
+            int index = 0;
+
+            U64 occupation_mask = rook ? 
+            rook_relevant_occupancy(square) : 
+            bishop_relevant_occupancy(square);
+
+            while(occupation_mask){
+                int mask_bit = std::countr_zero(occupation_mask);
+                
+                // get bit from variation and put under set (1) bit in relevant_occupancy
+                U64 bit = (variation & (1ULL << index)) ? 1ULL : 0ULL;
+                relevant_occupancy |= (bit << mask_bit);
+                
+                pop_bit(occupation_mask);
+                index++;
+            }
+            int magic_index = rook ? 
+            relevant_occupancy * rook_magic_numbers[square] >> (64-rook_relevant_occupancy_count[square]) : 
+            relevant_occupancy * bishop_magic_numbers[square] >> (64-bishop_relevant_occupancy_count[square]);
+
+            // set relevant occupancy to board
+            both_occupancy_bitboard = relevant_occupancy;
+            // oparates on both_occupancies
+            U64 attacks = rook ? calculate_rook_attacks(square) : calculate_bishop_attacks(square);
+
+            if(rook)
+                rook_lookup_attacks[square][magic_index] = attacks;
+            else
+                bishop_lookup_attacks[square][magic_index] = attacks;
+        }   
+    }
+}
+
 
 // ************************************
 // *          VISUALISATION
@@ -1080,11 +1086,11 @@ void print_game_state(){
 int main(int argc, char const *argv[])
 {
     U64 board = 0ULL;
+    init_attacks_lookup_tables(true);
+    init_attacks_lookup_tables(false);
     
     // generate_magic_numbers(false);
 
-    init_attacks_lookup_tables(true);
-    init_attacks_lookup_tables(false);
     
     both_occupancy_bitboard = 0ULL;
     set_bit(both_occupancy_bitboard, (int)SQUARE::d3);
@@ -1092,8 +1098,11 @@ int main(int argc, char const *argv[])
     set_bit(both_occupancy_bitboard, (int)SQUARE::f5);
     set_bit(both_occupancy_bitboard, (int)SQUARE::g2);
 
-    U64 ppp = bishop_attacks( (int)SQUARE::e4 );
+    U64 ppp = queen_attacks( (int)SQUARE::e4 );
     print_bitboard_bits(ppp);
 
     return 0;
 }
+
+// todo list
+// 1. quuen attakcs
