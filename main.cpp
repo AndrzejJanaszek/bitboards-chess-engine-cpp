@@ -6,14 +6,13 @@
 #include <unordered_map>
 #include <random>
 #include <chrono>
+#include <bitset>
 
 // ************************************
 // *         DEFINE STATEMENTS
 // ************************************
 
 #define U64 uint64_t
-
-
 
 // ************************************
 // *              ENUMS
@@ -34,15 +33,12 @@ enum class SQUARE {
   a8, b8, c8, d8, e8, f8, g8, h8
 };
 
-const std::string square_str[] = {
-    "a1","b1","c1","d1","e1","f1","g1","h1",
-    "a2","b2","c2","d2","e2","f2","g2","h2",
-    "a3","b3","c3","d3","e3","f3","g3","h3",
-    "a4","b4","c4","d4","e4","f4","g4","h4",
-    "a5","b5","c5","d5","e5","f5","g5","h5",
-    "a6","b6","c6","d6","e6","f6","g6","h6",
-    "a7","b7","c7","d7","e7","f7","g7","h7",
-    "a8","b8","c8","d8","e8","f8","g8","h8"
+enum class PIECE{
+    // pawn, rook, knight, bishop, queen, king
+    // white pieces
+    P, R, N, B, Q, K, 
+    // black pieces
+    p, r, n, b, q, k
 };
 
 inline int str_square_to_index(std::string square){
@@ -53,15 +49,9 @@ inline int str_square_to_index(std::string square){
     return (square[0] - 'a') + (square[1] - '1') * 8;
 }
 
-
-
-enum class PIECE{
-    // pawn, rook, knight, bishop, queen, king
-    // white pieces
-    P, R, N, B, Q, K, 
-    // black pieces
-    p, r, n, b, q, k
-};
+// ************************************
+// *               CONST
+// ************************************
 
 int piece_ascii_to_number[128] = {
     piece_ascii_to_number['P'] = static_cast<int>(PIECE::P),
@@ -79,184 +69,30 @@ int piece_ascii_to_number[128] = {
     piece_ascii_to_number['k'] = static_cast<int>(PIECE::k),
 };
 
-char ascii_pieces[] = {
+const char ascii_pieces[] = {
     'P', 'R', 'N', 'B', 'Q', 'K',
     'p', 'r', 'n', 'b', 'q', 'k'
 };
 
+const std::string square_str[] = {
+    "a1","b1","c1","d1","e1","f1","g1","h1",
+    "a2","b2","c2","d2","e2","f2","g2","h2",
+    "a3","b3","c3","d3","e3","f3","g3","h3",
+    "a4","b4","c4","d4","e4","f4","g4","h4",
+    "a5","b5","c5","d5","e5","f5","g5","h5",
+    "a6","b6","c6","d6","e6","f6","g6","h6",
+    "a7","b7","c7","d7","e7","f7","g7","h7",
+    "a8","b8","c8","d8","e8","f8","g8","h8"
+};
 
-// ************************************
-// *             BITBOARDS
-// ************************************
+const std::vector<const std::string> unicode_pieces = {
+    // white pieces
+    "♙","♖","♘","♗","♕","♔",
+    // black pieces
+    "♟","♜","♞","♝","♛","♚"
+};
 
-// bitboards; index: PIECE enum
-U64 bitboards[12] = {0};
-
-// 0 - white; 1 - black
-U64 color_occupancy_bitboards[2] = {0};
-
-U64 both_occupancy_bitboard = 0ULL;
-
-// castle system - each bit describes one possibility
-// | white queenside | white kingside | black queenside | black kingside |
-// |      bit 0/1    |     bit 0/1    |     bit 0/1     |    bit 0/1     |
-int castles = 0;
-
-// from enum COLOR -> white = 0, black = 1
-int color_to_move = -1;
-
-// from enum 0->63 square | -1 none
-int en_passant_square = -1;
-
-// halfmoves since last capture or pawn advance for fifty-move rule
-int halfmove_counter = 0;
-
-// Fullmove number: The number of the full moves. It starts at 1 and is incremented after Black's move.
-int fullmove_number = 1;
-
-// ************************************
-// *            FUNCTIONS
-// ************************************
-
-char rank_names[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
-
-inline void set_bit(U64 &bitboard, int square){
-    bitboard |= (1ULL << square);
-}
-
-inline void pop_bit(U64 &bitboard){
-    bitboard &= (bitboard-1);
-}
-
-void clear_bitboards(){
-    for(U64 &b : bitboards)
-        b = 0ULL;
-}
-
-void load_fen(std::string fen){
-    // fen fragments
-    // 1. piece data
-    // 2. active color
-    // 3. castling
-    // 4. en passant
-    // 5. Halfmove clock
-    // 6. Fullmove number
-
-    // split fen into 6 fragments (fields)
-    std::vector<std::string> fen_fragments(6, "");
-    int fragment_index = 0;
-    for(char &c : fen){
-        if(c == ' '){
-            fragment_index++;
-        }
-        else{
-            fen_fragments[fragment_index] += c;
-        }
-    }
-
-    // *** 1.st fragment ***
-    // split 1. fragment into ranks
-    // !!! ORDER REVERSED !!!
-    // fen construction: rank8/rank7/../rank2/rank1 from black to white
-    // !position_fragments are from rank1 to rank8
-
-    std::vector<std::string> position_fragments(8, "");
-    fragment_index = 7;
-    for(char &c : fen_fragments[0]){
-        if(c == '/'){
-            fragment_index--;
-        }
-        else{
-            position_fragments[fragment_index] += c;
-        }
-    }
-
-
-    // clear bitboards
-    clear_bitboards();
-
-    // set bitboards with pieces
-    for(int rank = 0; rank < 8; rank++){
-        for(int file = 0; file < 8; file++){
-            char c = position_fragments[rank][file];
-            // if digit <1;8> skip that number of squares
-            // file is incremented so we need to add only X-1 squares (files)
-            if('0' < c && c < '9') 
-                file+=(c-'0')-1;
-            else
-                set_bit(bitboards[piece_ascii_to_number[c]], rank*8+file);
-        }
-    }
-
-    // *** 2.st fragment ***
-    // set other game state variables
-    if(fen_fragments[1] == "w")
-        color_to_move = static_cast<int>(COLOR::white);
-    else if(fen_fragments[1] == "b")
-        color_to_move = static_cast<int>(COLOR::black);
-    else{
-        // todo rise exception
-        printf("Error: fen color to move not w or b");
-        exit(-1);
-    }
-
-    // *** 3.st fragment ***
-    // set castling availability (mask)
-    castles = 0;
-    for (const char &c : fen_fragments[2])
-    {
-        switch (c)
-        {
-            // set white queenside
-        case 'Q':
-            castles |= 0b1000;
-            break;
-
-            // set white kingside
-        case 'K':
-            castles |= 0b0100;
-            break;
-
-            // set black queenside
-        case 'q':
-            castles |= 0b0010;
-            break;
-
-            // set black kingside
-        case 'k':
-            castles |= 0b0001;
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    // *** 4.st fragment ***
-    // set en passant square
-    if(fen_fragments[3] == "-")
-        en_passant_square = -1;
-    else{
-        if(fen_fragments[3].length() > 2){
-            // todo rise exception
-            printf("Error: fen en passant square not '-' and length > 2");
-            exit(-1);
-        }
-    
-        en_passant_square = str_square_to_index( fen_fragments[3] );
-    }
-    
-    // *** 5.st fragment ***
-    // set halfmove counter
-    halfmove_counter = std::stoi(fen_fragments[4]);
-    // *** 6.st fragment ***
-    // set fullmove number
-    fullmove_number = std::stoi(fen_fragments[5]);
-}
-
-// ************************************
-// *         MOVE GENERATION
-// ************************************
+const char rank_names[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
 
 const U64 A_FILE_MASK = 0x101010101010101ULL;
 const U64 B_FILE_MASK = A_FILE_MASK << 1;
@@ -302,467 +138,6 @@ const U64 NOT_A_FILE = (~0Ull) ^ A_FILE_MASK;
 const U64 NOT_AB_FILE = (~0Ull) ^ (A_FILE_MASK | B_FILE_MASK);
 const U64 NOT_H_FILE = (~0Ull) ^ H_FILE_MASK;
 const U64 NOT_GH_FILE = (~0Ull) ^ (G_FILE_MASK | H_FILE_MASK);
-
-U64 pawn_attaks(int square, int color){
-    U64 piece_position = 1Ull << square;
-    if(color == static_cast<int>(COLOR::white)){
-        // bit shift and mask overflowing bits
-        return ((piece_position << 9) & NOT_A_FILE) | ((piece_position << 7) & NOT_H_FILE);
-    }
-    
-    // bit shift and mask overflowing bits
-    return ((piece_position >> 7) & NOT_A_FILE) | ((piece_position >> 9) & NOT_H_FILE);
-}
-
-U64 king_attacks(int square){
-    // left    right
-    // <<7 <<8 <<9
-    // >>1  K  <<1
-    // >>9 >>8 >>7
-    // left side moves mask with NOT_H_RANK
-    // right side moves mask with NOT_A_RANK
-
-    U64 piece_position = 1Ull << square;
-
-    U64 attacks =
-    // up
-    (piece_position << 8) |
-    //down
-    (piece_position >> 8) |
-    //right
-    (((piece_position << 9) | (piece_position << 1) | (piece_position >> 7)) & NOT_A_FILE) |
-    //left
-    (((piece_position << 7) | (piece_position >> 1) | (piece_position >> 9)) & NOT_H_FILE);
-
-    return attacks;
-}
-
-U64 knight_attacks(int square){
-    U64 piece_position = 1Ull << square;
-
-    //| GH |  H |   |  A | AB |
-    //|    |<<15| - |<<17|    |
-    //|<<6 |    | - |    |<<10|
-    //|    |    | N |    |    |
-    //|>>10|    | - |    |>>6 |
-    //|    |>>17| - |>>15|    |
-    // moves must be masked to prevent overflowing moves
-
-    U64 attacks =
-    // A mask
-    (((piece_position << 17) | (piece_position >> 15)) & NOT_A_FILE) |
-    // AB mask
-    (((piece_position << 10) | (piece_position >> 6)) & NOT_AB_FILE) |
-    // H mask
-    (((piece_position << 15) | (piece_position >> 17)) & NOT_H_FILE) |
-    // GH mask
-    (((piece_position << 6) | (piece_position >> 10)) & NOT_GH_FILE);
-
-    return attacks;
-    
-}
-
-
-
-U64 calculate_bishop_attacks(int square){
-    U64 attacks = 0ULL;
-
-    // *up-right direction
-    U64 cursor = 1ULL << square;
-    // 46 is last interesting square
-    for(int sq = square; (sq / 8 < 7) & (sq % 8 < 7); sq+=9){
-        // move cursor
-        cursor <<= 9;
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-
-    // *up-left direction
-    // reset cursor to square
-    cursor = 1ULL << square;
-    // 47 is last interesting square
-    for(int sq = square; (sq / 8 < 7) & (sq % 8 > 0); sq+=7){
-        // move cursor
-        cursor <<= 7;
-
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-
-    // *down-left direction
-    // reset cursor to square
-    cursor = 1ULL << square;
-    // 18 is first interesting square
-    for(int sq = square; (sq / 8 > 0) & (sq % 8 > 0); sq-=9){
-        // move cursor
-        cursor >>= 9;
-
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-
-    // *down-right direction
-    // reset cursor to square
-    cursor = 1ULL << square;
-    // 21 is first interesting square
-    for(int sq = square; (sq / 8 > 0) & (sq % 8 < 7); sq-=7){
-        // move cursor
-        cursor >>= 7;
-
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-    
-    return attacks;
-}
-
-U64 calculate_rook_attacks(int square){
-    U64 attacks = 0ULL;
-    // * up
-    U64 cursor = 1ULL << square;
-    for(int sq = square; (sq / 8 < 7); sq+=8){
-        // move cursor
-        cursor <<= 8;
-
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-
-    // * down
-    // reset cursor
-    cursor = 1ULL << square;
-    for(int sq = square; (sq / 8 > 0); sq-=8){
-        // move cursor
-        cursor >>= 8;
-
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-
-    // * left
-    // reset cursor
-    cursor = 1ULL << square;
-    for(int sq = square; (sq % 8 > 0); sq-=1){
-        // move cursor
-        cursor >>= 1;
-
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-
-    // * right
-    // reset cursor
-    cursor = 1ULL << square;
-    for(int sq = square; (sq % 8 < 7); sq+=1){
-        // move cursor
-        cursor <<= 1;
-
-        // save relevant square
-        attacks |= cursor;
-
-        // blocker
-        if(cursor & both_occupancy_bitboard)
-            break;
-    }
-
-    return attacks;
-}
-
-// ************************************
-// *          VISUALISATION
-// ************************************
-
-void print_board_of_strings(const std::vector<std::string> &board_strings){
-    // print bitboard bits with rank and file descriptions
-    // printf("-------------------------\n");
-    printf("    a b c d e f g h\n");
-    printf("\n");
-    for (int  rank = 7; rank >= 0; rank--){
-        printf("%d   ", rank+1);
-        for (int  file = 0; file < 8; file++)
-        {
-            std::cout << board_strings[rank*8 + file] << " ";
-        }
-        printf("  %d", rank+1);
-        printf("\n");
-    }
-    printf("\n");
-    printf("    a b c d e f g h\n");
-    // printf("-------------------------\n");
-}
-
-void print_bitboard_bits(const U64 &bitboard){
-    // little-endian rank-file mapping
-    std::vector<std::string> str_board(64, "0");
-    
-    // tranform U64 to string (first char is a1 last is h8)
-    for (int  i = 0; i < 64; i++)
-        str_board[i] = ((bitboard & (1ULL << i)) ? "1" : "0");
-
-    print_board_of_strings(str_board);
-
-    std::cout << "bitboard as number: \n";
-    std::cout << "hex: 0x" << std::hex << bitboard << "\n";
-    std::cout << "dec: " << std::dec << bitboard << "ULL\n";
-}
-
-void print_board_ascii(){
-    std::vector<std::string> pieces(64, "0");
-
-
-    // for each bitboard (piece type) set its characters
-    for(int bitboard_index = 0; bitboard_index < 12; bitboard_index++){
-        U64 piece_bitboard = bitboards[bitboard_index];
-        // until 1 bits available in current piece bitboard
-        while(piece_bitboard){
-            // get LS1B index (count the number of consecutive 0 bits) 
-            int square_number = std::countr_zero(piece_bitboard);
-
-            // set ascii character 
-            pieces[square_number] = std::string(1, ascii_pieces[bitboard_index]);
-
-            // delete LS1B
-            piece_bitboard = piece_bitboard & (piece_bitboard-1);
-        }
-    }
-
-    print_board_of_strings(pieces);
-}
-
-//   a b c d e f g h
-// 8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ 
-// 7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟ 
-// 6 · · · · · · · · 
-// 5 · · · · · · · · 
-// 4 · · · · · · · · 
-// 3 · · · · · · · · 
-// 2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙ 
-// 1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖ 
-//   a b c d e f g h
-
-std::vector<std::string> unicode_pieces = {
-    // white pieces
-    "♙","♖","♘","♗","♕","♔",
-    // black pieces
-    "♟","♜","♞","♝","♛","♚"
-};
-
-void print_board_unicode(){
-    std::vector<std::string> pieces(64, ".");
-
-    // for each bitboard (piece type) set its characters
-    for(int bitboard_index = 0; bitboard_index < 12; bitboard_index++){
-        U64 piece_bitboard = bitboards[bitboard_index];
-        // until 1 bits available in current piece bitboard
-        while(piece_bitboard){
-            // get LS1B index (count the number of consecutive 0 bits) 
-            int square_number = std::countr_zero(piece_bitboard);
-
-            // set unicode character 
-            pieces[square_number] = unicode_pieces[bitboard_index];
-
-            // delete LS1B
-            piece_bitboard = piece_bitboard & (piece_bitboard-1);
-        }
-    }
-
-    print_board_of_strings(pieces);
-}
-
-void print_game_state(){
-
-    printf("#############################\n");
-    printf("#      GAME STATUS INFO     #\n");
-    printf("#############################\n");
-
-    printf("\n");
-    printf("----------------------------- \n");
-    printf("----------- BOARD ----------- \n");
-    printf("----------------------------- \n");
-    printf("\n");
-
-    print_board_unicode();
-
-    printf("\n");
-    printf("----------------------------- \n");
-    printf("--------- VARIABLES ---------\n");
-    printf("----------------------------- \n");
-    printf("\n");
-
-    printf("- Color to move:\n");
-    printf("\tint: %d\n", color_to_move);
-    printf("\tstr: %s\n", color_to_move ? "black" : "white");
-
-    printf("- Castling availability:\n");
-    printf("\tbin: %c%c%c%c\n", 
-        (castles & 1) ? '1' : '0',
-        (castles & 2) ? '1' : '0',
-        (castles & 4) ? '1' : '0',
-        (castles & 8) ? '1' : '0'
-    );
-    printf("\tstr: %c%c%c%c\n", 
-        (castles & 1) ? 'Q' : '-',
-        (castles & 2) ? 'K' : '-',
-        (castles & 4) ? 'q' : '-',
-        (castles & 8) ? 'k' : '-'
-    );
-    printf("- En passant square: \n");
-    printf("\tint: %d\n", en_passant_square);
-    std::cout << "\tstr: " << ((en_passant_square < 0) ? "-" : square_str[en_passant_square]) << std::endl;
-    printf("- Halfmove counter: %d\n", halfmove_counter);
-    printf("- Fullmove number: %d\n", fullmove_number);
-
-    printf("---------------------------\n");
-}
-
-// ************************************
-// *             MAIN
-// ************************************
-
-U64 rook_relevant_occupancy(int square){
-    int rank = square / 8;
-    int file = square % 8;
-    U64 border = RANK_1_MASK ^ RANK_8_MASK ^ A_FILE_MASK ^ H_FILE_MASK;
-    // border:
-    // 8   0 1 1 1 1 1 1 0   8
-    // 7   1 0 0 0 0 0 0 1   7
-    // 6   1 0 0 0 0 0 0 1   6
-    // 5   1 0 0 0 0 0 0 1   5
-    // 4   1 0 0 0 0 0 0 1   4
-    // 3   1 0 0 0 0 0 0 1   3
-    // 2   1 0 0 0 0 0 0 1   2
-    // 1   0 1 1 1 1 1 1 0   1
-
-    // if square on border:
-    if (rank == 0 || rank == 7){
-        border = border ^ RANK_MASK_ARR[rank];
-    }
-    if (file == 0 || file == 7){
-        border = border ^ FILE_MASK_ARR[file];
-    }
-    // XOR these edges (on square position); here square = a1
-    // 8   1 1 1 1 1 1 1 0   8
-    // 7   0 0 0 0 0 0 0 1   7
-    // 6   0 0 0 0 0 0 0 1   6
-    // 5   0 0 0 0 0 0 0 1   5
-    // 4   0 0 0 0 0 0 0 1   4
-    // 3   0 0 0 0 0 0 0 1   3
-    // 2   0 0 0 0 0 0 0 1   2
-    // 1   0 0 0 0 0 0 0 1   1
-
-    U64 relevant_occupancy = 
-    // make cross on square position (vertical and horizontal, actually '+' sign)
-    (RANK_MASK_ARR[rank] | FILE_MASK_ARR[file]) 
-    // remove border from relevant ocupancies
-    & ~(border) 
-    // remove square
-    & ~(1ULL << square);
-
-    return relevant_occupancy;
-}
-
-U64 bishop_relevant_occupancy(int square){
-    U64 relevant_occupancy = 0ULL;
-
-    // *up-right direction
-    U64 cursor = 1ULL << square;
-    // 46 is last interesting square
-    for(int sq = square; (sq / 8 < 6) & (sq % 8 < 6); sq+=9){
-        // move cursor
-        cursor <<= 9;
-
-        // save relevant square
-        relevant_occupancy |= cursor;
-    }
-
-    // *up-left direction
-    // reset cursor to square
-    cursor = 1ULL << square;
-    // 47 is last interesting square
-    for(int sq = square; (sq / 8 < 6) & (sq % 8 > 1); sq+=7){
-        // move cursor
-        cursor <<= 7;
-
-        // save relevant square
-        relevant_occupancy |= cursor;
-    }
-
-    // *down-left direction
-    // reset cursor to square
-    cursor = 1ULL << square;
-    // 18 is first interesting square
-    for(int sq = square; (sq / 8 > 1) & (sq % 8 > 1); sq-=9){
-        // move cursor
-        cursor >>= 9;
-
-        // save relevant square
-        relevant_occupancy |= cursor;
-    }
-
-    // *down-right direction
-    // reset cursor to square
-    cursor = 1ULL << square;
-    // 21 is first interesting square
-    for(int sq = square; (sq / 8 > 1) & (sq % 8 < 6); sq-=7){
-        // move cursor
-        cursor >>= 7;
-
-        // save relevant square
-        relevant_occupancy |= cursor;
-    }
-    
-    return relevant_occupancy;
-}
-
-U64 bishop_relevant_occupancy_count[64] = {
-    6, 5, 5, 5, 5, 5, 5, 6, 
-    5, 5, 5, 5, 5, 5, 5, 5,
-    5, 5, 7, 7, 7, 7, 5, 5,
-    5, 5, 7, 9, 9, 7, 5, 5,
-    5, 5, 7, 9, 9, 7, 5, 5,
-    5, 5, 7, 7, 7, 7, 5, 5,
-    5, 5, 5, 5, 5, 5, 5, 5,
-    6, 5, 5, 5, 5, 5, 5, 6
-};
-
-U64 rook_relevant_occupancy_count[64] = {
-    12, 11, 11, 11, 11, 11, 11, 12, 
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    11, 10, 10, 10, 10, 10, 10, 11,
-    12, 11, 11, 11, 11, 11, 11, 12
-};
 
 constexpr U64 rook_magic_numbers[64]={
 2630102260767531144ULL,
@@ -898,17 +273,218 @@ constexpr U64 bishop_magic_numbers[64] = {
 1155179937326440833ULL
 };
 
+const int bishop_relevant_occupancy_count[64] = {
+    6, 5, 5, 5, 5, 5, 5, 6, 
+    5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 9, 9, 7, 5, 5,
+    5, 5, 7, 7, 7, 7, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    6, 5, 5, 5, 5, 5, 5, 6
+};
+
+const int rook_relevant_occupancy_count[64] = {
+    12, 11, 11, 11, 11, 11, 11, 12, 
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    11, 10, 10, 10, 10, 10, 10, 11,
+    12, 11, 11, 11, 11, 11, 11, 12
+};
+
+U64 rook_lookup_attacks[64][4096];
+U64 bishop_lookup_attacks[64][512];
+
+// ************************************
+// *      BITBOARDS & GAME STATE
+// ************************************
+
+// bitboards; index: PIECE enum
+U64 bitboards[12] = {0};
+
+// 0 - white; 1 - black
+U64 color_occupancy_bitboards[2] = {0};
+
+U64 both_occupancy_bitboard = 0ULL;
+
+// castle system - each bit describes one possibility
+// | white queenside | white kingside | black queenside | black kingside |
+// |      bit 0/1    |     bit 0/1    |     bit 0/1     |    bit 0/1     |
+int castles = 0;
+
+// from enum COLOR -> white = 0, black = 1
+int color_to_move = -1;
+
+// from enum 0->63 square | -1 none
+int en_passant_square = -1;
+
+// halfmoves since last capture or pawn advance for fifty-move rule
+int halfmove_counter = 0;
+
+// Fullmove number: The number of the full moves. It starts at 1 and is incremented after Black's move.
+int fullmove_number = 1;
+
+// ************************************
+// *            FUNCTIONS
+// ************************************
+
+inline void set_bit(U64 &bitboard, int square){
+    bitboard |= (1ULL << square);
+}
+
+inline void pop_bit(U64 &bitboard){
+    bitboard &= (bitboard-1);
+}
+
+void clear_bitboards(){
+    for(U64 &b : bitboards)
+        b = 0ULL;
+}
+
+void load_fen(std::string fen){
+    // fen fragments
+    // 1. piece data
+    // 2. active color
+    // 3. castling
+    // 4. en passant
+    // 5. Halfmove clock
+    // 6. Fullmove number
+
+    // split fen into 6 fragments (fields)
+    std::vector<std::string> fen_fragments(6, "");
+    int fragment_index = 0;
+    for(char &c : fen){
+        if(c == ' '){
+            fragment_index++;
+        }
+        else{
+            fen_fragments[fragment_index] += c;
+        }
+    }
+
+    // *** 1.st fragment ***
+    // split 1. fragment into ranks
+    // !!! ORDER REVERSED !!!
+    // fen construction: rank8/rank7/../rank2/rank1 from black to white
+    // !position_fragments are from rank1 to rank8
+
+    std::vector<std::string> position_fragments(8, "");
+    fragment_index = 7;
+    for(char &c : fen_fragments[0]){
+        if(c == '/'){
+            fragment_index--;
+        }
+        else{
+            position_fragments[fragment_index] += c;
+        }
+    }
+
+
+    // clear bitboards
+    clear_bitboards();
+
+    // set bitboards with pieces
+    for(int rank = 0; rank < 8; rank++){
+        for(int file = 0; file < 8; file++){
+            char c = position_fragments[rank][file];
+            // if digit <1;8> skip that number of squares
+            // file is incremented so we need to add only X-1 squares (files)
+            if('0' < c && c < '9') 
+                file+=(c-'0')-1;
+            else
+                set_bit(bitboards[piece_ascii_to_number[c]], rank*8+file);
+        }
+    }
+
+    // *** 2.st fragment ***
+    // set other game state variables
+    if(fen_fragments[1] == "w")
+        color_to_move = static_cast<int>(COLOR::white);
+    else if(fen_fragments[1] == "b")
+        color_to_move = static_cast<int>(COLOR::black);
+    else{
+        // todo rise exception
+        printf("Error: fen color to move not w or b");
+        exit(-1);
+    }
+
+    // *** 3.st fragment ***
+    // set castling availability (mask)
+    castles = 0;
+    for (const char &c : fen_fragments[2])
+    {
+        switch (c)
+        {
+            // set white queenside
+        case 'Q':
+            castles |= 0b1000;
+            break;
+
+            // set white kingside
+        case 'K':
+            castles |= 0b0100;
+            break;
+
+            // set black queenside
+        case 'q':
+            castles |= 0b0010;
+            break;
+
+            // set black kingside
+        case 'k':
+            castles |= 0b0001;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    // *** 4.st fragment ***
+    // set en passant square
+    if(fen_fragments[3] == "-")
+        en_passant_square = -1;
+    else{
+        if(fen_fragments[3].length() > 2){
+            // todo rise exception
+            printf("Error: fen en passant square not '-' and length > 2");
+            exit(-1);
+        }
+    
+        en_passant_square = str_square_to_index( fen_fragments[3] );
+    }
+    
+    // *** 5.st fragment ***
+    // set halfmove counter
+    halfmove_counter = std::stoi(fen_fragments[4]);
+    // *** 6.st fragment ***
+    // set fullmove number
+    fullmove_number = std::stoi(fen_fragments[5]);
+}
+
+// ------------------------------------------
+
 // not in use
-void set_relevant_occupancy_count_tables(){
+// todo test
+void print_relevant_occupancy_count_tables(){
     // set relevant occupancy count tables
+    std::cout << "BISHOP RELEVANT OCCUPANCY COUNT: \n";
     for(int i = 0; i < 64; i++){
         // count of set bits (1 bits)
-        bishop_relevant_occupancy_count[i] = std::popcount(rook_relevant_occupancy(i));
-        rook_relevant_occupancy_count[i] = std::popcount(bishop_relevant_occupancy(i));
+        std::cout << std::popcount(bishop_relevant_occupancy(i)) << ", ";
+        if((i+1)%8 == 0) 
+            std::cout << "\n";
+    }
 
-        // std::cout << std::popcount(bishop_relevant_occupancy(i)) << ", ";
-        // if((i+1)%8 == 0) 
-        //     std::cout << "\n";
+    std::cout << "\n\nROOK RELEVANT OCCUPANCY COUNT: \n";
+    for(int i = 0; i < 64; i++){
+        // count of set bits (1 bits)
+        std::cout << std::popcount(rook_relevant_occupancy(i)) << ", ";
+        if((i+1)%8 == 0) 
+            std::cout << "\n";
     }
 }
 
@@ -1011,28 +587,6 @@ void generate_magic_numbers(bool rook){
     printf("correct numbers: %d\n",correct_numbers);
 }
 
-#include <bitset>
-U64 rook_lookup_attacks[64][4096];
-U64 bishop_lookup_attacks[64][512];
-
-U64 rook_attacks(int square){
-    U64 magic_number = rook_magic_numbers[square];
-    U64 relevant_occupancy = rook_relevant_occupancy(square) & both_occupancy_bitboard;
-    int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
-
-    return rook_lookup_attacks[square][magic_index];
-}
-
-U64 bishop_attacks(int square){
-    U64 magic_number = bishop_magic_numbers[square];
-    U64 relevant_occupancy = bishop_relevant_occupancy(square) & both_occupancy_bitboard;
-    int magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
-
-    return bishop_lookup_attacks[square][magic_index];
-}
-
-
-
 void init_attacks_lookup_tables(bool rook){
     for(int square = 0; square < 64; square++){
         for(int variation = 0; (variation < (rook ? 4096 : 512)); variation++){
@@ -1072,6 +626,457 @@ void init_attacks_lookup_tables(bool rook){
 
 //todo: functions (for example init lookup tables) must clear state (both_occupancies)
 
+// ************************************
+// *         ATTACK GENERATION
+// ************************************
+
+U64 pawn_attaks(int square, int color){
+    U64 piece_position = 1Ull << square;
+    if(color == static_cast<int>(COLOR::white)){
+        // bit shift and mask overflowing bits
+        return ((piece_position << 9) & NOT_A_FILE) | ((piece_position << 7) & NOT_H_FILE);
+    }
+    
+    // bit shift and mask overflowing bits
+    return ((piece_position >> 7) & NOT_A_FILE) | ((piece_position >> 9) & NOT_H_FILE);
+}
+
+U64 king_attacks(int square){
+    // left    right
+    // <<7 <<8 <<9
+    // >>1  K  <<1
+    // >>9 >>8 >>7
+    // left side moves mask with NOT_H_RANK
+    // right side moves mask with NOT_A_RANK
+
+    U64 piece_position = 1Ull << square;
+
+    U64 attacks =
+    // up
+    (piece_position << 8) |
+    //down
+    (piece_position >> 8) |
+    //right
+    (((piece_position << 9) | (piece_position << 1) | (piece_position >> 7)) & NOT_A_FILE) |
+    //left
+    (((piece_position << 7) | (piece_position >> 1) | (piece_position >> 9)) & NOT_H_FILE);
+
+    return attacks;
+}
+
+U64 knight_attacks(int square){
+    U64 piece_position = 1Ull << square;
+
+    //| GH |  H |   |  A | AB |
+    //|    |<<15| - |<<17|    |
+    //|<<6 |    | - |    |<<10|
+    //|    |    | N |    |    |
+    //|>>10|    | - |    |>>6 |
+    //|    |>>17| - |>>15|    |
+    // moves must be masked to prevent overflowing moves
+
+    U64 attacks =
+    // A mask
+    (((piece_position << 17) | (piece_position >> 15)) & NOT_A_FILE) |
+    // AB mask
+    (((piece_position << 10) | (piece_position >> 6)) & NOT_AB_FILE) |
+    // H mask
+    (((piece_position << 15) | (piece_position >> 17)) & NOT_H_FILE) |
+    // GH mask
+    (((piece_position << 6) | (piece_position >> 10)) & NOT_GH_FILE);
+
+    return attacks;
+    
+}
+
+U64 rook_attacks(int square){
+    U64 magic_number = rook_magic_numbers[square];
+    U64 relevant_occupancy = rook_relevant_occupancy(square) & both_occupancy_bitboard;
+    int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
+
+    return rook_lookup_attacks[square][magic_index];
+}
+
+U64 bishop_attacks(int square){
+    U64 magic_number = bishop_magic_numbers[square];
+    U64 relevant_occupancy = bishop_relevant_occupancy(square) & both_occupancy_bitboard;
+    int magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
+
+    return bishop_lookup_attacks[square][magic_index];
+}
+
+U64 calculate_bishop_attacks(int square){
+    U64 attacks = 0ULL;
+
+    // *up-right direction
+    U64 cursor = 1ULL << square;
+    // 46 is last interesting square
+    for(int sq = square; (sq / 8 < 7) & (sq % 8 < 7); sq+=9){
+        // move cursor
+        cursor <<= 9;
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // *up-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 47 is last interesting square
+    for(int sq = square; (sq / 8 < 7) & (sq % 8 > 0); sq+=7){
+        // move cursor
+        cursor <<= 7;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // *down-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 18 is first interesting square
+    for(int sq = square; (sq / 8 > 0) & (sq % 8 > 0); sq-=9){
+        // move cursor
+        cursor >>= 9;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // *down-right direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 21 is first interesting square
+    for(int sq = square; (sq / 8 > 0) & (sq % 8 < 7); sq-=7){
+        // move cursor
+        cursor >>= 7;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+    
+    return attacks;
+}
+
+U64 calculate_rook_attacks(int square){
+    U64 attacks = 0ULL;
+    // * up
+    U64 cursor = 1ULL << square;
+    for(int sq = square; (sq / 8 < 7); sq+=8){
+        // move cursor
+        cursor <<= 8;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // * down
+    // reset cursor
+    cursor = 1ULL << square;
+    for(int sq = square; (sq / 8 > 0); sq-=8){
+        // move cursor
+        cursor >>= 8;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // * left
+    // reset cursor
+    cursor = 1ULL << square;
+    for(int sq = square; (sq % 8 > 0); sq-=1){
+        // move cursor
+        cursor >>= 1;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    // * right
+    // reset cursor
+    cursor = 1ULL << square;
+    for(int sq = square; (sq % 8 < 7); sq+=1){
+        // move cursor
+        cursor <<= 1;
+
+        // save relevant square
+        attacks |= cursor;
+
+        // blocker
+        if(cursor & both_occupancy_bitboard)
+            break;
+    }
+
+    return attacks;
+}
+
+U64 rook_relevant_occupancy(int square){
+    int rank = square / 8;
+    int file = square % 8;
+    U64 border = RANK_1_MASK ^ RANK_8_MASK ^ A_FILE_MASK ^ H_FILE_MASK;
+    // border:
+    // 8   0 1 1 1 1 1 1 0   8
+    // 7   1 0 0 0 0 0 0 1   7
+    // 6   1 0 0 0 0 0 0 1   6
+    // 5   1 0 0 0 0 0 0 1   5
+    // 4   1 0 0 0 0 0 0 1   4
+    // 3   1 0 0 0 0 0 0 1   3
+    // 2   1 0 0 0 0 0 0 1   2
+    // 1   0 1 1 1 1 1 1 0   1
+
+    // if square on border:
+    if (rank == 0 || rank == 7){
+        border = border ^ RANK_MASK_ARR[rank];
+    }
+    if (file == 0 || file == 7){
+        border = border ^ FILE_MASK_ARR[file];
+    }
+    // XOR these edges (on square position); here square = a1
+    // 8   1 1 1 1 1 1 1 0   8
+    // 7   0 0 0 0 0 0 0 1   7
+    // 6   0 0 0 0 0 0 0 1   6
+    // 5   0 0 0 0 0 0 0 1   5
+    // 4   0 0 0 0 0 0 0 1   4
+    // 3   0 0 0 0 0 0 0 1   3
+    // 2   0 0 0 0 0 0 0 1   2
+    // 1   0 0 0 0 0 0 0 1   1
+
+    U64 relevant_occupancy = 
+    // make cross on square position (vertical and horizontal, actually '+' sign)
+    (RANK_MASK_ARR[rank] | FILE_MASK_ARR[file]) 
+    // remove border from relevant ocupancies
+    & ~(border) 
+    // remove square
+    & ~(1ULL << square);
+
+    return relevant_occupancy;
+}
+
+U64 bishop_relevant_occupancy(int square){
+    U64 relevant_occupancy = 0ULL;
+
+    // *up-right direction
+    U64 cursor = 1ULL << square;
+    // 46 is last interesting square
+    for(int sq = square; (sq / 8 < 6) & (sq % 8 < 6); sq+=9){
+        // move cursor
+        cursor <<= 9;
+
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+
+    // *up-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 47 is last interesting square
+    for(int sq = square; (sq / 8 < 6) & (sq % 8 > 1); sq+=7){
+        // move cursor
+        cursor <<= 7;
+
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+
+    // *down-left direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 18 is first interesting square
+    for(int sq = square; (sq / 8 > 1) & (sq % 8 > 1); sq-=9){
+        // move cursor
+        cursor >>= 9;
+
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+
+    // *down-right direction
+    // reset cursor to square
+    cursor = 1ULL << square;
+    // 21 is first interesting square
+    for(int sq = square; (sq / 8 > 1) & (sq % 8 < 6); sq-=7){
+        // move cursor
+        cursor >>= 7;
+
+        // save relevant square
+        relevant_occupancy |= cursor;
+    }
+    
+    return relevant_occupancy;
+}
+
+
+// ************************************
+// *          VISUALISATION
+// ************************************
+
+void print_board_of_strings(const std::vector<std::string> &board_strings){
+    // print bitboard bits with rank and file descriptions
+    // printf("-------------------------\n");
+    printf("    a b c d e f g h\n");
+    printf("\n");
+    for (int  rank = 7; rank >= 0; rank--){
+        printf("%d   ", rank+1);
+        for (int  file = 0; file < 8; file++)
+        {
+            std::cout << board_strings[rank*8 + file] << " ";
+        }
+        printf("  %d", rank+1);
+        printf("\n");
+    }
+    printf("\n");
+    printf("    a b c d e f g h\n");
+    // printf("-------------------------\n");
+}
+
+void print_bitboard_bits(const U64 &bitboard){
+    // little-endian rank-file mapping
+    std::vector<std::string> str_board(64, "0");
+    
+    // tranform U64 to string (first char is a1 last is h8)
+    for (int  i = 0; i < 64; i++)
+        str_board[i] = ((bitboard & (1ULL << i)) ? "1" : "0");
+
+    print_board_of_strings(str_board);
+
+    std::cout << "bitboard as number: \n";
+    std::cout << "hex: 0x" << std::hex << bitboard << "\n";
+    std::cout << "dec: " << std::dec << bitboard << "ULL\n";
+}
+
+void print_board_ascii(){
+    std::vector<std::string> pieces(64, "0");
+
+
+    // for each bitboard (piece type) set its characters
+    for(int bitboard_index = 0; bitboard_index < 12; bitboard_index++){
+        U64 piece_bitboard = bitboards[bitboard_index];
+        // until 1 bits available in current piece bitboard
+        while(piece_bitboard){
+            // get LS1B index (count the number of consecutive 0 bits) 
+            int square_number = std::countr_zero(piece_bitboard);
+
+            // set ascii character 
+            pieces[square_number] = std::string(1, ascii_pieces[bitboard_index]);
+
+            // delete LS1B
+            piece_bitboard = piece_bitboard & (piece_bitboard-1);
+        }
+    }
+
+    print_board_of_strings(pieces);
+}
+
+//   a b c d e f g h
+// 8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ 
+// 7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟ 
+// 6 · · · · · · · · 
+// 5 · · · · · · · · 
+// 4 · · · · · · · · 
+// 3 · · · · · · · · 
+// 2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙ 
+// 1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖ 
+//   a b c d e f g h
+
+void print_board_unicode(){
+    std::vector<std::string> pieces(64, ".");
+
+    // for each bitboard (piece type) set its characters
+    for(int bitboard_index = 0; bitboard_index < 12; bitboard_index++){
+        U64 piece_bitboard = bitboards[bitboard_index];
+        // until 1 bits available in current piece bitboard
+        while(piece_bitboard){
+            // get LS1B index (count the number of consecutive 0 bits) 
+            int square_number = std::countr_zero(piece_bitboard);
+
+            // set unicode character 
+            pieces[square_number] = unicode_pieces[bitboard_index];
+
+            // delete LS1B
+            piece_bitboard = piece_bitboard & (piece_bitboard-1);
+        }
+    }
+
+    print_board_of_strings(pieces);
+}
+
+void print_game_state(){
+
+    printf("#############################\n");
+    printf("#      GAME STATUS INFO     #\n");
+    printf("#############################\n");
+
+    printf("\n");
+    printf("----------------------------- \n");
+    printf("----------- BOARD ----------- \n");
+    printf("----------------------------- \n");
+    printf("\n");
+
+    print_board_unicode();
+
+    printf("\n");
+    printf("----------------------------- \n");
+    printf("--------- VARIABLES ---------\n");
+    printf("----------------------------- \n");
+    printf("\n");
+
+    printf("- Color to move:\n");
+    printf("\tint: %d\n", color_to_move);
+    printf("\tstr: %s\n", color_to_move ? "black" : "white");
+
+    printf("- Castling availability:\n");
+    printf("\tbin: %c%c%c%c\n", 
+        (castles & 1) ? '1' : '0',
+        (castles & 2) ? '1' : '0',
+        (castles & 4) ? '1' : '0',
+        (castles & 8) ? '1' : '0'
+    );
+    printf("\tstr: %c%c%c%c\n", 
+        (castles & 1) ? 'Q' : '-',
+        (castles & 2) ? 'K' : '-',
+        (castles & 4) ? 'q' : '-',
+        (castles & 8) ? 'k' : '-'
+    );
+    printf("- En passant square: \n");
+    printf("\tint: %d\n", en_passant_square);
+    std::cout << "\tstr: " << ((en_passant_square < 0) ? "-" : square_str[en_passant_square]) << std::endl;
+    printf("- Halfmove counter: %d\n", halfmove_counter);
+    printf("- Fullmove number: %d\n", fullmove_number);
+
+    printf("---------------------------\n");
+}
+
+// ************************************
+// *             MAIN
+// ************************************
+
 int main(int argc, char const *argv[])
 {
     U64 board = 0ULL;
@@ -1092,4 +1097,3 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
-// 
