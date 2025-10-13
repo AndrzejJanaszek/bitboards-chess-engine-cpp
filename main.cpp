@@ -34,10 +34,9 @@ enum class SQUARE {
 };
 
 enum class PIECE{
-    // pawn, rook, knight, bishop, queen, king
-    // white pieces
-    P, R, N, B, Q, K, 
-    // black pieces
+    // pawn(Pp), rook(Rr), knight(Nn), bishop(Bb), queen(Qq), king(Kk)
+    // upperCase white; lowerCase black
+    P, R, N, B, Q, K,
     p, r, n, b, q, k
 };
 
@@ -295,6 +294,11 @@ const int rook_relevant_occupancy_count[64] = {
     12, 11, 11, 11, 11, 11, 11, 12
 };
 
+U64 pawn_lookup_attacks[2][64];
+
+U64 knight_lookup_attacks[64];
+U64 king_lookup_attacks[64];
+
 U64 rook_lookup_attacks[64][4096];
 U64 bishop_lookup_attacks[64][512];
 
@@ -371,33 +375,46 @@ void load_fen(std::string fen){
     // fen construction: rank8/rank7/../rank2/rank1 from black to white
     // !position_fragments are from rank1 to rank8
 
-    std::vector<std::string> position_fragments(8, "");
-    fragment_index = 7;
-    for(char &c : fen_fragments[0]){
-        if(c == '/'){
-            fragment_index--;
-        }
-        else{
-            position_fragments[fragment_index] += c;
-        }
-    }
-
-
     // clear bitboards
     clear_bitboards();
 
-    // set bitboards with pieces
-    for(int rank = 0; rank < 8; rank++){
-        for(int file = 0; file < 8; file++){
-            char c = position_fragments[rank][file];
-            // if digit <1;8> skip that number of squares
-            // file is incremented so we need to add only X-1 squares (files)
-            if('0' < c && c < '9') 
-                file+=(c-'0')-1;
-            else
-                set_bit(bitboards[piece_ascii_to_number[c]], rank*8+file);
+    int square = static_cast<int>(SQUARE::a8);
+    std::string fen_position = fen_fragments[0];
+    for(int i = 0; i < fen_position.length(); i++){
+        char c = fen_position[i];
+        if(fen_position[i] == '/'){
+            // go down the rank
+            square = ((square / 8) - 2)*8;
+            continue;
         }
+
+        if( '1' <= fen_position[i] && fen_position[i] <= '8'){
+            square += (fen_position[i] - '0');
+            continue;
+        }
+
+        // add piece to bb
+        bitboards[piece_ascii_to_number[fen_position[i]]] |= (1ULL << square);
+        square++;
     }
+
+    color_occupancy_bitboards[static_cast<int>(COLOR::white)] = 
+    bitboards[static_cast<int>(PIECE::P)] | 
+    bitboards[static_cast<int>(PIECE::R)] | 
+    bitboards[static_cast<int>(PIECE::B)] | 
+    bitboards[static_cast<int>(PIECE::N)] | 
+    bitboards[static_cast<int>(PIECE::Q)] | 
+    bitboards[static_cast<int>(PIECE::K)];
+
+    color_occupancy_bitboards[static_cast<int>(COLOR::black)] = 
+    bitboards[static_cast<int>(PIECE::p)] | 
+    bitboards[static_cast<int>(PIECE::r)] | 
+    bitboards[static_cast<int>(PIECE::b)] | 
+    bitboards[static_cast<int>(PIECE::n)] | 
+    bitboards[static_cast<int>(PIECE::q)] | 
+    bitboards[static_cast<int>(PIECE::k)];
+
+    both_occupancy_bitboard = color_occupancy_bitboards[0] | color_occupancy_bitboards[1];
 
     // *** 2.st fragment ***
     // set other game state variables
@@ -700,7 +717,7 @@ U64 bishop_relevant_occupancy(int square){
     return relevant_occupancy;
 }
 
-U64 pawn_attaks(int square, int color){
+U64 pawn_attacks(int square, int color){
     U64 piece_position = 1Ull << square;
     if(color == static_cast<int>(COLOR::white)){
         // bit shift and mask overflowing bits
@@ -901,7 +918,7 @@ void generate_magic_numbers(bool rook){
     printf("correct numbers: %d\n",correct_numbers);
 }
 
-void init_attacks_lookup_tables(bool rook){
+void init_rook_bishop_lookup_tables(bool rook){
     for(int square = 0; square < 64; square++){
         for(int variation = 0; (variation < (rook ? 4096 : 512)); variation++){
             U64 relevant_occupancy = 0ULL;
@@ -938,6 +955,90 @@ void init_attacks_lookup_tables(bool rook){
     }
 }
 
+void init_pawn_lookup_table(){
+    for( int side = 0; side < 2; side++){
+        for (int square = 0; square < 64; square++){
+            pawn_lookup_attacks[side][square] = pawn_attacks(square, side);
+        }
+    }
+}
+
+void init_king_lookup_table(){
+    for (int square = 0; square < 64; square++){
+        king_lookup_attacks[square] = king_attacks(square);
+    }
+}
+
+void init_knight_lookup_table(){
+    for (int square = 0; square < 64; square++){
+        knight_lookup_attacks[square] = knight_attacks(square);
+    }
+}
+
+void init_all_lookup_tables(){
+    init_rook_bishop_lookup_tables(true);
+    init_rook_bishop_lookup_tables(false);
+    init_pawn_lookup_table();
+    init_king_lookup_table();
+    init_knight_lookup_table();
+}
+
+// ************************************
+// *         MOVE GENERATION
+// ************************************
+
+// is given <square> attacked by <side>
+bool is_square_attacked_by(int square, int side){
+    // super-piece technic
+    // set pieces on current <square> and intersect attacks with appropriate pieces
+    // for pawn intersect enemy pawns => white intersect black and vice versa
+    
+    // pawns
+    // set enemy piece on <square> and check does it attack friendly pawns
+    if (pawn_lookup_attacks[!side][square] & bitboards[ static_cast<int>(PIECE::P) + (!side * 6) ])
+        return true;
+
+    // todo sprawdzić kiedyś różnice w wydajności
+    /* if(side == static_cast<int>(COLOR::white)){
+        if (pawn_attacks(square, static_cast<int>(COLOR::black)) & bitboards[static_cast<int>(PIECE::p)])
+            return true;
+    }
+    else{
+        if (pawn_attacks(square, static_cast<int>(COLOR::white)) & bitboards[static_cast<int>(PIECE::P)])
+            return true;
+    }*/
+
+    // knight
+    // intersect with friendly knights
+    if (knight_lookup_attacks[square] & bitboards[static_cast<int>(PIECE::N) + (side * 6)])
+        return true;
+
+    // bishop
+    // intersect with bishops and queens
+    if (bishop_attacks(square) & (bitboards[static_cast<int>(PIECE::B) + (side * 6)] | bitboards[static_cast<int>(PIECE::Q) + (side * 6)]))
+        return true;
+
+    // rook
+    if (rook_attacks(square) & (bitboards[static_cast<int>(PIECE::R) + (side * 6)] | bitboards[static_cast<int>(PIECE::Q) + (side * 6)]))
+        return true;
+
+    // king
+    if (king_lookup_attacks[square] & bitboards[static_cast<int>(PIECE::K) + (side * 6)])
+        return true;
+
+    return false;
+}
+
+// debug / testing
+U64 get_attacked_squares(int side){
+    U64 result = 0ULL;
+
+    for(int square = 0; square < 64; square++){
+        result |= is_square_attacked_by(square, side) ? (1ULL << square) : 0ULL;
+    }
+
+    return result;
+}
 
 // ************************************
 // *          VISUALISATION
@@ -1086,20 +1187,43 @@ void print_game_state(){
 int main(int argc, char const *argv[])
 {
     U64 board = 0ULL;
-    init_attacks_lookup_tables(true);
-    init_attacks_lookup_tables(false);
-    
-    // generate_magic_numbers(false);
-
-    
     both_occupancy_bitboard = 0ULL;
-    set_bit(both_occupancy_bitboard, (int)SQUARE::d3);
-    set_bit(both_occupancy_bitboard, (int)SQUARE::a8);
-    set_bit(both_occupancy_bitboard, (int)SQUARE::f5);
-    set_bit(both_occupancy_bitboard, (int)SQUARE::g2);
 
-    U64 ppp = queen_attacks( (int)SQUARE::e4 );
-    print_bitboard_bits(ppp);
+    init_all_lookup_tables();
+
+    // load_fen("");
+    load_fen("R7/8/8/8/8/8/8/8 w - - 0 1"); // white rook e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+
+    load_fen("r7/8/8/8/8/8/8/8 w - - 0 1"); // black rook e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+
+    load_fen("B7/8/8/8/8/8/8/8 w - - 0 1"); // white bishop e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+
+    load_fen("b7/8/8/8/8/8/8/8 w - - 0 1"); // black bishop e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+
+    load_fen("N7/8/8/8/8/8/8/8 w - - 0 1"); // white knight e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+
+    load_fen("n7/8/8/8/8/8/8/8 w - - 0 1"); // black knight e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+
+    load_fen("K7/8/8/8/8/8/8/8 w - - 0 1"); // white king e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+
+    load_fen("k7/8/8/8/8/8/8/8 w - - 0 1"); // black king e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+
+    load_fen("Q7/8/8/8/8/8/8/8 w - - 0 1"); // white queen e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+
+    load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+
+    // load_fen("");
+
 
     return 0;
 }
