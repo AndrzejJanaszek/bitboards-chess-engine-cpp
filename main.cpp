@@ -343,6 +343,13 @@ inline void pop_bit(U64 &bitboard){
     bitboard &= (bitboard-1);
 }
 
+// get least significant bit set(1)
+// return index of that bit (0x1 => 0, 0x1000 => 3)
+// more precise: number of zeros before FS1B
+inline int get_LS1B(U64 &bitboard){
+    return std::countr_zero(bitboard);
+}
+
 void clear_bitboards(){
     for(U64 &b : bitboards)
         b = 0ULL;
@@ -858,7 +865,7 @@ void generate_magic_numbers(bool rook){
                 bishop_relevant_occupancy(square);
 
                 while(occupation_mask){
-                    int mask_bit = std::countr_zero(occupation_mask);
+                    int mask_bit = get_LS1B(occupation_mask);
                     
                     // get bit from variation and put under set (1) bit in relevant_occupancy
                     // relevant_occupancy |= ( !!(variation & (1ULL << index)) << mask_bit );
@@ -929,7 +936,7 @@ void init_rook_bishop_lookup_tables(bool rook){
             bishop_relevant_occupancy(square);
 
             while(occupation_mask){
-                int mask_bit = std::countr_zero(occupation_mask);
+                int mask_bit = get_LS1B(occupation_mask);
                 
                 // get bit from variation and put under set (1) bit in relevant_occupancy
                 U64 bit = (variation & (1ULL << index)) ? 1ULL : 0ULL;
@@ -1040,6 +1047,104 @@ U64 get_attacked_squares(int side){
     return result;
 }
 
+void generate_moves(){
+    int from_square = 0, to_square = 0;
+    U64 pice_bitboard_copy = 0ULL;
+
+    //for each piece type in <color_to_move>
+    for(int piece = static_cast<int>(PIECE::P) + (color_to_move*6); piece < static_cast<int>(PIECE::K) + (color_to_move*6); piece++){
+        pice_bitboard_copy = bitboards[piece];
+
+        // while pieces on BB
+        while (pice_bitboard_copy)
+        {
+            from_square = get_LS1B(pice_bitboard_copy);
+
+            //* pawn moves
+            if(piece == static_cast<int>(PIECE::P) || piece == static_cast<int>(PIECE::p)){
+                bool is_on_promotion = 
+                    (from_square >= static_cast<int>(SQUARE::a7) && from_square <= static_cast<int>(SQUARE::h7) && color_to_move == static_cast<int>(COLOR::white)) ||
+                    (from_square >= static_cast<int>(SQUARE::a2) && from_square <= static_cast<int>(SQUARE::h2) && color_to_move == static_cast<int>(COLOR::black));
+
+                // attacks
+                U64 attacks = pawn_lookup_attacks[color_to_move][from_square];
+
+                // for each attacking square
+                while (attacks){
+                    to_square = get_LS1B(attacks);
+
+                    // if enemy add move
+                    if(color_occupancy_bitboards[ !color_to_move ] & (1ULL << to_square)){
+                        // last rank promotion
+                        if(is_on_promotion){
+                            // add move
+                            printf("Pawn capture promotion Rr: %sx%s", square_str[from_square], square_str[to_square]);
+                            printf("Pawn capture promotion Nn: %sx%s", square_str[from_square], square_str[to_square]);
+                            printf("Pawn capture promotion Bb: %sx%s", square_str[from_square], square_str[to_square]);
+                            printf("Pawn capture promotion Qq: %sx%s", square_str[from_square], square_str[to_square]);
+                        }
+                        else{
+                            // add move
+                            printf("Pawn capture move: %s%s", square_str[from_square], square_str[to_square]);
+                        }
+                    }
+                    
+                    // remove LS1B
+                    pop_bit(attacks);
+                }
+
+                // single push
+                to_square = from_square + 8;
+                bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
+
+                if(is_target_square_empty){
+                    if(is_on_promotion){
+                        printf("Pawn promotion Rr: %s%s", square_str[from_square], square_str[to_square]);
+                        printf("Pawn promotion Nn: %s%s", square_str[from_square], square_str[to_square]);
+                        printf("Pawn promotion Bb: %s%s", square_str[from_square], square_str[to_square]);
+                        printf("Pawn promotion Qq: %s%s", square_str[from_square], square_str[to_square]);
+                    }
+                    else{
+                        printf("Pawn single push: %s%s", square_str[from_square], square_str[to_square]);
+                    }
+
+                    // double push
+                    to_square = from_square + 16;
+                    bool is_on_starting_rank = 
+                        (from_square >= static_cast<int>(SQUARE::a2) && from_square <= static_cast<int>(SQUARE::h2) && color_to_move == static_cast<int>(COLOR::white)) ||
+                        (from_square >= static_cast<int>(SQUARE::a7) && from_square <= static_cast<int>(SQUARE::h7) && color_to_move == static_cast<int>(COLOR::black));
+                    is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
+
+                    if(is_on_starting_rank && is_target_square_empty){
+                        // todo add en passant
+                        printf("Pawn double push: %s%s", square_str[from_square], square_str[to_square]);
+                    }
+                }
+            }
+
+
+
+            
+            //* rook moves
+            //* knight moves
+            //* bishop moves
+            //* queen moves
+            //* king moves
+
+
+
+
+
+            
+            
+            
+            // remove LS1B
+            pop_bit(pice_bitboard_copy);
+        }
+        
+    }
+}
+
 // ************************************
 // *          VISUALISATION
 // ************************************
@@ -1088,7 +1193,7 @@ void print_board_ascii(){
         // until 1 bits available in current piece bitboard
         while(piece_bitboard){
             // get LS1B index (count the number of consecutive 0 bits) 
-            int square_number = std::countr_zero(piece_bitboard);
+            int square_number = get_LS1B(piece_bitboard);
 
             // set ascii character 
             pieces[square_number] = std::string(1, ascii_pieces[bitboard_index]);
@@ -1121,7 +1226,7 @@ void print_board_unicode(){
         // until 1 bits available in current piece bitboard
         while(piece_bitboard){
             // get LS1B index (count the number of consecutive 0 bits) 
-            int square_number = std::countr_zero(piece_bitboard);
+            int square_number = get_LS1B(piece_bitboard);
 
             // set unicode character 
             pieces[square_number] = unicode_pieces[bitboard_index];
@@ -1192,7 +1297,7 @@ int main(int argc, char const *argv[])
     init_all_lookup_tables();
 
     // load_fen("");
-    load_fen("R7/8/8/8/8/8/8/8 w - - 0 1"); // white rook e4
+    /* load_fen("R7/8/8/8/8/8/8/8 w - - 0 1"); // white rook e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
 
     load_fen("r7/8/8/8/8/8/8/8 w - - 0 1"); // black rook e4
@@ -1220,10 +1325,9 @@ int main(int argc, char const *argv[])
     print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
 
     load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+    print_bitboard_bits(get_attacked_squares( (int)COLOR::black )); */
 
     // load_fen("");
-
 
     return 0;
 }
