@@ -1050,6 +1050,7 @@ U64 get_attacked_squares(int side){
 void generate_moves(){
     int from_square = 0, to_square = 0;
     U64 pice_bitboard_copy = 0ULL;
+    U64 attacks = 0ULL;
 
     //for each piece type in <color_to_move>
     for(int piece = static_cast<int>(PIECE::P) + (color_to_move*6); piece < static_cast<int>(PIECE::K) + (color_to_move*6); piece++){
@@ -1067,7 +1068,7 @@ void generate_moves(){
                     (from_square >= static_cast<int>(SQUARE::a2) && from_square <= static_cast<int>(SQUARE::h2) && color_to_move == static_cast<int>(COLOR::black));
 
                 // attacks
-                U64 attacks = pawn_lookup_attacks[color_to_move][from_square];
+                attacks = pawn_lookup_attacks[color_to_move][from_square];
 
                 // for each attacking square
                 while (attacks){
@@ -1123,15 +1124,36 @@ void generate_moves(){
             }
 
 
+            //* knight moves
+            if(piece == static_cast<int>(PIECE::N) || piece == static_cast<int>(PIECE::n)){
+                attacks = knight_lookup_attacks[from_square];
+
+                while(attacks){
+                    to_square = get_LS1B(attacks);
+
+                    bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
+                    bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
+                    if(is_target_square_empty){
+                        std::cout << "Knight move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+                    else if(is_enemy){
+                        std::cout << "Knight capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+
+                    pop_bit(attacks);
+                }
+            }
+
+            //* bishop moves
+            //* rook moves
+            //* queen moves
+            //* king moves
+            
+            
             // remove LS1B
             pop_bit(pice_bitboard_copy);
         }
 
-        //* rook moves
-        //* knight moves
-        //* bishop moves
-        //* queen moves
-        //* king moves
         
     }
 }
@@ -1318,7 +1340,7 @@ int main(int argc, char const *argv[])
     load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::black )); */
 
-    load_fen("4p1p1/5P2/8/8/8/3P4/1P6/8 w HAha - 0 1");
+    load_fen("8/5P2/8/4n3/8/3P4/8/8 b HAha - 0 1");
     generate_moves();
 
     // load_fen("");
