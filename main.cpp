@@ -1081,8 +1081,13 @@ void generate_moves(){
                 while (attacks){
                     to_square = get_LS1B(attacks);
 
+                    // if en passant capture
+                    if(en_passant_square == to_square){
+                        std::cout << "Pawn capture move en_passnat: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                    }
+
                     // if enemy add move
-                    if(color_occupancy_bitboards[ !color_to_move ] & (1ULL << to_square)){
+                    else if(color_occupancy_bitboards[ !color_to_move ] & (1ULL << to_square)){
                         // last rank promotion
                         if(is_on_promotion){
                             // add move
@@ -1479,7 +1484,7 @@ int main(int argc, char const *argv[])
     load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::black )); */
 
-    load_fen("r2qk2r/8/8/8/8/8/8/8 b HAkq - 0 1");
+    load_fen("4k3/8/8/8/4pP2/8/8/4K3 b - f3 0 1");
     print_board_unicode();
     generate_moves();
 
