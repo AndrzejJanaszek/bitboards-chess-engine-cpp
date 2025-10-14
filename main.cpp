@@ -1078,14 +1078,14 @@ void generate_moves(){
                         // last rank promotion
                         if(is_on_promotion){
                             // add move
-                            printf("Pawn capture promotion Rr: %sx%s", square_str[from_square], square_str[to_square]);
-                            printf("Pawn capture promotion Nn: %sx%s", square_str[from_square], square_str[to_square]);
-                            printf("Pawn capture promotion Bb: %sx%s", square_str[from_square], square_str[to_square]);
-                            printf("Pawn capture promotion Qq: %sx%s", square_str[from_square], square_str[to_square]);
+                            std::cout << "Pawn capture promotion Rr: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            std::cout << "Pawn capture promotion Nn: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            std::cout << "Pawn capture promotion Bb: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            std::cout << "Pawn capture promotion Qq: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
                         }
                         else{
                             // add move
-                            printf("Pawn capture move: %s%s", square_str[from_square], square_str[to_square]);
+                            std::cout << "Pawn capture move: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
                         }
                     }
                     
@@ -1094,22 +1094,22 @@ void generate_moves(){
                 }
 
                 // single push
-                to_square = from_square + 8;
+                to_square = color_to_move == static_cast<int>(COLOR::white) ? from_square + 8 : from_square - 8;
                 bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
 
                 if(is_target_square_empty){
                     if(is_on_promotion){
-                        printf("Pawn promotion Rr: %s%s", square_str[from_square], square_str[to_square]);
-                        printf("Pawn promotion Nn: %s%s", square_str[from_square], square_str[to_square]);
-                        printf("Pawn promotion Bb: %s%s", square_str[from_square], square_str[to_square]);
-                        printf("Pawn promotion Qq: %s%s", square_str[from_square], square_str[to_square]);
+                        std::cout << "Pawn promotion Rr: " << square_str[from_square] << square_str[to_square] << "\n";
+                        std::cout << "Pawn promotion Nn: " << square_str[from_square] << square_str[to_square] << "\n";
+                        std::cout << "Pawn promotion Bb: " << square_str[from_square] << square_str[to_square] << "\n";
+                        std::cout << "Pawn promotion Qq: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else{
-                        printf("Pawn single push: %s%s", square_str[from_square], square_str[to_square]);
+                        std::cout << "Pawn single push: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
 
                     // double push
-                    to_square = from_square + 16;
+                    to_square = color_to_move == static_cast<int>(COLOR::white) ? from_square + 16 : from_square - 16;
                     bool is_on_starting_rank = 
                         (from_square >= static_cast<int>(SQUARE::a2) && from_square <= static_cast<int>(SQUARE::h2) && color_to_move == static_cast<int>(COLOR::white)) ||
                         (from_square >= static_cast<int>(SQUARE::a7) && from_square <= static_cast<int>(SQUARE::h7) && color_to_move == static_cast<int>(COLOR::black));
@@ -1117,30 +1117,21 @@ void generate_moves(){
 
                     if(is_on_starting_rank && is_target_square_empty){
                         // todo add en passant
-                        printf("Pawn double push: %s%s", square_str[from_square], square_str[to_square]);
+                        std::cout << "Pawn double push: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                 }
             }
 
 
-
-            
-            //* rook moves
-            //* knight moves
-            //* bishop moves
-            //* queen moves
-            //* king moves
-
-
-
-
-
-            
-            
-            
             // remove LS1B
             pop_bit(pice_bitboard_copy);
         }
+
+        //* rook moves
+        //* knight moves
+        //* bishop moves
+        //* queen moves
+        //* king moves
         
     }
 }
@@ -1323,9 +1314,12 @@ int main(int argc, char const *argv[])
 
     load_fen("Q7/8/8/8/8/8/8/8 w - - 0 1"); // white queen e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
-
+    
     load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::black )); */
+
+    load_fen("4p1p1/5P2/8/8/8/3P4/1P6/8 w HAha - 0 1");
+    generate_moves();
 
     // load_fen("");
 
