@@ -93,6 +93,12 @@ std::vector<std::string> unicode_pieces = {
 
 const char rank_names[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
 
+// masks for checking empty square between king and rooks
+constexpr U64 white_queenside_empty_squares_castling_mask = 0xe;
+constexpr U64 white_kingside_empty_squares_castling_mask = 0x60;
+constexpr U64 black_queenside_empty_squares_castling_mask = 0xe00000000000000;
+constexpr U64 black_kingside_empty_squares_castling_mask = 0x6000000000000000;
+
 const U64 A_FILE_MASK = 0x101010101010101ULL;
 const U64 B_FILE_MASK = A_FILE_MASK << 1;
 const U64 C_FILE_MASK = A_FILE_MASK << 2;
@@ -1053,7 +1059,7 @@ void generate_moves(){
     U64 attacks = 0ULL;
 
     //for each piece type in <color_to_move>
-    for(int piece = static_cast<int>(PIECE::P) + (color_to_move*6); piece < static_cast<int>(PIECE::K) + (color_to_move*6); piece++){
+    for(int piece = static_cast<int>(PIECE::P) + (color_to_move*6); piece <= static_cast<int>(PIECE::K) + (color_to_move*6); piece++){
         pice_bitboard_copy = bitboards[piece];
 
         // while pieces on BB
@@ -1061,6 +1067,7 @@ void generate_moves(){
         {
             from_square = get_LS1B(pice_bitboard_copy);
 
+            // todo capture en passasnt
             //* pawn moves
             if(piece == static_cast<int>(PIECE::P) || piece == static_cast<int>(PIECE::p)){
                 bool is_on_promotion = 
@@ -1194,10 +1201,10 @@ void generate_moves(){
                     bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
                     bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
                     if(is_target_square_empty){
-                        std::cout << "Rook move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        std::cout << "Queen move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else if(is_enemy){
-                        std::cout << "Rook capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        std::cout << "Queen capture move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
 
                     pop_bit(attacks);
@@ -1205,7 +1212,82 @@ void generate_moves(){
             }
 
             //* king moves
-            
+            if(piece == static_cast<int>(PIECE::K) || piece == static_cast<int>(PIECE::k)){
+                attacks = king_lookup_attacks[from_square];
+
+                while(attacks){
+                    to_square = get_LS1B(attacks);
+
+                    bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
+                    bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
+                    if(is_target_square_empty){
+                        std::cout << "King move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+                    else if(is_enemy){
+                        std::cout << "King capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+
+                    pop_bit(attacks);
+                }
+
+                // castling
+                // castle system - each bit describes one possibility
+                // | white queenside | white kingside | black queenside | black kingside |
+                // |      bit 0/1    |     bit 0/1    |     bit 0/1     |    bit 0/1     |
+                // castle state | empty squares | not attacked
+
+                // white side
+                if(color_to_move == static_cast<int>(COLOR::white)){
+                    // is QUEENside castling possible (game state)
+                    if(castles & 0b1000){
+                        // are squares between king and rook empty
+                        if((both_occupancy_bitboard & white_queenside_empty_squares_castling_mask) == 0){
+                            // king and square next to him is not under attack
+                            // is NOT attacked (e1) && is NOT attacked (d1)
+                            if(!is_square_attacked_by(static_cast<int>(SQUARE::e1), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::d1), !color_to_move)){
+                                std::cout << "White queenside castle: e1c1 O-O-O \n";
+                            }
+                        }
+                    }
+
+                    // is KINGside castling possible (game state)
+                    if(castles & 0b0100){
+                        // are squares between king and rook empty
+                        if((both_occupancy_bitboard & white_kingside_empty_squares_castling_mask) == 0){
+                            // king and square next to him is not under attack
+                            // is NOT attacked (e1) && is NOT attacked (f1)
+                            if(!is_square_attacked_by(static_cast<int>(SQUARE::e1), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::f1), !color_to_move)){
+                                std::cout << "White kingside castle: e1g1 O-O \n";
+                            }
+                        }
+                    }
+                }else{
+                    // is QUEENside castling possible (game state)
+                    if(castles & 0b0010){
+                        // are squares between king and rook empty
+                        if((both_occupancy_bitboard & black_queenside_empty_squares_castling_mask) == 0){
+                            // king and square next to him is not under attack
+                            // is NOT attacked (e8) && is NOT attacked (d8)
+                            if(!is_square_attacked_by(static_cast<int>(SQUARE::e8), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::d8), !color_to_move)){
+                                std::cout << "Black queenside castle: e8c8 O-O-O \n";
+                            }
+                        }
+                    }
+
+                    // is KINGside castling possible (game state)
+                    if(castles & 0b0001){
+                        // are squares between king and rook empty
+                        if((both_occupancy_bitboard & black_kingside_empty_squares_castling_mask) == 0){
+                            // king and square next to him is not under attack
+                            // is NOT attacked (e8) && is NOT attacked (f8)
+                            if(!is_square_attacked_by(static_cast<int>(SQUARE::e8), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::f8), !color_to_move)){
+                                std::cout << "Black kingside castle: e8g8 O-O \n";
+                            }
+                        }
+                    }
+                }
+
+            }
             
             // remove LS1B
             pop_bit(pice_bitboard_copy);
@@ -1397,8 +1479,30 @@ int main(int argc, char const *argv[])
     load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::black )); */
 
-    load_fen("8/8/8/3PPP2/3PbP2/3PPP2/8/8 b HAha - 0 1");
+    load_fen("r2qk2r/8/8/8/8/8/8/8 b HAkq - 0 1");
+    print_board_unicode();
     generate_moves();
+
+
+
+    // WQ
+    // 14ULL
+    // 0xe
+
+    // WK
+    // 96ULL
+    // 0x60
+
+    // BQ
+    // 1008806316530991104ULL
+    // 0xe00000000000000
+
+    // BK
+    // 0x6000000000000000
+    // 6917529027641081856ULL
+
+
+
 
     // load_fen("");
 
