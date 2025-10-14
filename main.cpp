@@ -1145,8 +1145,65 @@ void generate_moves(){
             }
 
             //* bishop moves
+            if(piece == static_cast<int>(PIECE::B) || piece == static_cast<int>(PIECE::b)){
+                attacks = bishop_attacks(from_square);
+
+                while(attacks){
+                    to_square = get_LS1B(attacks);
+
+                    bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
+                    bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
+                    if(is_target_square_empty){
+                        std::cout << "Bishop move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+                    else if(is_enemy){
+                        std::cout << "Bishop capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+
+                    pop_bit(attacks);
+                }
+            }
+
             //* rook moves
+            if(piece == static_cast<int>(PIECE::R) || piece == static_cast<int>(PIECE::r)){
+                attacks = rook_attacks(from_square);
+
+                while(attacks){
+                    to_square = get_LS1B(attacks);
+
+                    bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
+                    bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
+                    if(is_target_square_empty){
+                        std::cout << "Rook move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+                    else if(is_enemy){
+                        std::cout << "Rook capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+
+                    pop_bit(attacks);
+                }
+            }
+
             //* queen moves
+            if(piece == static_cast<int>(PIECE::Q) || piece == static_cast<int>(PIECE::q)){
+                attacks = queen_attacks(from_square);
+
+                while(attacks){
+                    to_square = get_LS1B(attacks);
+
+                    bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
+                    bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
+                    if(is_target_square_empty){
+                        std::cout << "Rook move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+                    else if(is_enemy){
+                        std::cout << "Rook capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                    }
+
+                    pop_bit(attacks);
+                }
+            }
+
             //* king moves
             
             
@@ -1340,7 +1397,7 @@ int main(int argc, char const *argv[])
     load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::black )); */
 
-    load_fen("8/5P2/8/4n3/8/3P4/8/8 b HAha - 0 1");
+    load_fen("8/8/8/3PPP2/3PbP2/3PPP2/8/8 b HAha - 0 1");
     generate_moves();
 
     // load_fen("");
