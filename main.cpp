@@ -48,6 +48,71 @@ inline int str_square_to_index(std::string square){
     return (square[0] - 'a') + (square[1] - '1') * 8;
 }
 
+// ----------------------------------------------------------------------------|
+// | MOVE ENCODING                                                             |
+// ----------------------------------------------------------------------------|
+// | 20 bits                                                                   |
+// | 0000 0000 0000 0011 1111 from square === 0x3f                             |
+// | 0000 0000 1111 1100 0000 to square   === 0xfc0                            |
+// | 0000 1111 0000 0000 0000 piece       === 0xf000                           |
+// | 1111 0000 0000 0000 0000 flags       === 0xf0000                          |
+// |---------------------------------------------------------------------------|
+// |                             FLAG ENCODING                                 |
+// |---------------------------------------------------------------------------|
+// | code | promotion | capture | special 1 | special 0 |     kind of move     |        
+// |---------------------------------------------------------------------------|
+// |  0	  |     0     |    0    |     0     |     0     | quiet moves          |
+// |  1	  |     0     |    0    |     0     |     1     | double pawn push     |
+// |  2	  |     0     |    0    |     1     |     0     | king castle          |
+// |  3	  |     0     |    0    |     1     |     1     | queen castle         |
+// |  4	  |     0     |    1    |     0     |     0     | captures             |
+// |  5	  |     0     |    1    |     0     |     1     | ep-capture           |
+// |  8	  |     1     |    0    |     0     |     0     | knight-promotion     |
+// |  9	  |     1     |    0    |     0     |     1     | bishop-promotion     |
+// |  10  |     1     |    0    |     1     |     0     | rook-promotion       |
+// |  11  |     1     |    0    |     1     |     1     | queen-promotion      |
+// |  12  |     1     |    1    |     0     |     0     | knight-promo capture |
+// |  13  |     1     |    1    |     0     |     1     | bishop-promo capture |
+// |  14  |     1     |    1    |     1     |     0     | rook-promo capture   |
+// |  15  |     1     |    1    |     1     |     1     | queen-promo capture  |
+// -----------------------------------------------------------------------------
+
+enum class MoveType{
+    quiet_move = 0,
+    double_pawn_push = 1,
+    king_castle = 2,
+    queen_castle = 3,
+    capture = 4,
+    en_passant_capture = 5,
+    knight_promotion = 8,
+    bishop_promotion = 9,
+    rook_promotion = 10,
+    queen_promotion = 11,
+    knight_promo_capture = 12,
+    bishop_promo_capture = 13,
+    rook_promo_capture = 14,
+    queen_promo_capture = 15
+};
+
+const std::string move_type_str[16] = {
+    "quiet_move",
+    "double_pawn_push",
+    "king_castle",
+    "queen_castle",
+    "capture", 
+    "en_passant_capture",
+    "undefined move type",
+    "undefined move type",
+    "knight_promotion",
+    "bishop_promotion",
+    "rook_promotion",
+    "queen_promotion",
+    "knight_promo_capture",
+    "bishop_promo_capture",
+    "rook_promo_capture",
+    "queen_promo_capture" 
+};
+
 // ************************************
 // *               CONST
 // ************************************
@@ -336,6 +401,46 @@ int halfmove_counter = 0;
 
 // Fullmove number: The number of the full moves. It starts at 1 and is incremented after Black's move.
 int fullmove_number = 1;
+
+// ************************************
+// *            CLASSES
+// ************************************
+
+class Move{
+public:
+    // todo
+    //? todo -> ?unsigned?
+    unsigned int encoded_value = 0;
+
+    inline int get_from_square(){
+        return (encoded_value & 0x3f);
+    }
+
+    int get_to_square(){
+        return ((encoded_value & 0xfc0) >> 6);
+    }
+
+    int get_piece(){
+        return ((encoded_value & 0xf000) >> 12);
+    }
+
+    int get_move_type(){
+        return ((encoded_value & 0xf000) >> 16);
+    }
+
+    void encode_move(int from_square, int to_square, int piece, MoveType move_type){
+        encoded_value = 0;
+        encoded_value |= from_square;
+        encoded_value |= (to_square << 6);
+        encoded_value |= (piece << 12);
+        encoded_value |= (static_cast<int>(move_type) << 16);
+    }
+
+    void print(){
+        std::cout << "Move: " << square_str[this->get_from_square()] << square_str[this->get_to_square()] << " " 
+        << ascii_pieces[this->get_piece()] << " " << move_type_str[this->get_move_type()] << "\n";
+    }
+};
 
 // ************************************
 // *            FUNCTIONS
@@ -1053,10 +1158,12 @@ U64 get_attacked_squares(int side){
     return result;
 }
 
-void generate_moves(){
+std::vector<Move> generate_moves(){
     int from_square = 0, to_square = 0;
     U64 pice_bitboard_copy = 0ULL;
     U64 attacks = 0ULL;
+
+    std::vector<Move> moves;
 
     //for each piece type in <color_to_move>
     for(int piece = static_cast<int>(PIECE::P) + (color_to_move*6); piece <= static_cast<int>(PIECE::K) + (color_to_move*6); piece++){
@@ -1083,22 +1190,37 @@ void generate_moves(){
 
                     // if en passant capture
                     if(en_passant_square == to_square){
-                        std::cout << "Pawn capture move en_passnat: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                        // std::cout << "Pawn capture move en_passnat: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6),MoveType::en_passant_capture);
+                        moves.push_back(move);
                     }
-
+                    
                     // if enemy add move
                     else if(color_occupancy_bitboards[ !color_to_move ] & (1ULL << to_square)){
                         // last rank promotion
                         if(is_on_promotion){
                             // add move
-                            std::cout << "Pawn capture promotion Rr: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
-                            std::cout << "Pawn capture promotion Nn: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
-                            std::cout << "Pawn capture promotion Bb: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
-                            std::cout << "Pawn capture promotion Qq: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            // std::cout << "Pawn capture promotion Rr: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            // std::cout << "Pawn capture promotion Bb: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            // std::cout << "Pawn capture promotion Nn: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            // std::cout << "Pawn capture promotion Qq: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            Move move[4];
+                            move[0].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::rook_promo_capture);
+                            move[1].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::bishop_promo_capture);
+                            move[2].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::knight_promo_capture);
+                            move[3].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::queen_promo_capture);
+                            moves.push_back(move[0]);
+                            moves.push_back(move[1]);
+                            moves.push_back(move[2]);
+                            moves.push_back(move[3]);
                         }
                         else{
                             // add move
-                            std::cout << "Pawn capture move: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            // std::cout << "Pawn capture move: " << square_str[from_square] << "x" << square_str[to_square] << "\n";
+                            Move move;
+                            move.encode_move(from_square, to_square, static_cast<int>(PIECE::P) * (color_to_move*6), MoveType::capture);
+                            moves.push_back(move);
                         }
                     }
                     
@@ -1112,13 +1234,25 @@ void generate_moves(){
 
                 if(is_target_square_empty){
                     if(is_on_promotion){
-                        std::cout << "Pawn promotion Rr: " << square_str[from_square] << square_str[to_square] << "\n";
-                        std::cout << "Pawn promotion Nn: " << square_str[from_square] << square_str[to_square] << "\n";
-                        std::cout << "Pawn promotion Bb: " << square_str[from_square] << square_str[to_square] << "\n";
-                        std::cout << "Pawn promotion Qq: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move[4];
+                        move[0].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::rook_promotion);
+                        move[1].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::bishop_promotion);
+                        move[2].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::knight_promotion);
+                        move[3].encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::queen_promotion);
+                        moves.push_back(move[0]);
+                        moves.push_back(move[1]);
+                        moves.push_back(move[2]);
+                        moves.push_back(move[3]);
+                        // std::cout << "Pawn promotion Rr: " << square_str[from_square] << square_str[to_square] << "\n";
+                        // std::cout << "Pawn promotion Nn: " << square_str[from_square] << square_str[to_square] << "\n";
+                        // std::cout << "Pawn promotion Bb: " << square_str[from_square] << square_str[to_square] << "\n";
+                        // std::cout << "Pawn promotion Qq: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else{
-                        std::cout << "Pawn single push: " << square_str[from_square] << square_str[to_square] << "\n";
+                        // std::cout << "Pawn single push: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::quiet_move);
+                        moves.push_back(move);
                     }
 
                     // double push
@@ -1129,8 +1263,11 @@ void generate_moves(){
                     is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
 
                     if(is_on_starting_rank && is_target_square_empty){
-                        // todo add en passant
-                        std::cout << "Pawn double push: " << square_str[from_square] << square_str[to_square] << "\n";
+                        // todo add en passant flag set
+                        // std::cout << "Pawn double push: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::double_pawn_push);
+                        moves.push_back(move);
                     }
                 }
             }
@@ -1146,10 +1283,16 @@ void generate_moves(){
                     bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
                     bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
                     if(is_target_square_empty){
-                        std::cout << "Knight move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::N) + (color_to_move*6), MoveType::quiet_move);
+                        moves.push_back(move);
+                        // std::cout << "Knight move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else if(is_enemy){
-                        std::cout << "Knight capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::N) + (color_to_move*6), MoveType::capture);
+                        moves.push_back(move);
+                        // std::cout << "Knight capture move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
 
                     pop_bit(attacks);
@@ -1166,10 +1309,16 @@ void generate_moves(){
                     bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
                     bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
                     if(is_target_square_empty){
-                        std::cout << "Bishop move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::B) + (color_to_move*6), MoveType::quiet_move);
+                        moves.push_back(move);
+                        // std::cout << "Bishop move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else if(is_enemy){
-                        std::cout << "Bishop capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::B) + (color_to_move*6), MoveType::capture);
+                        moves.push_back(move);
+                        // std::cout << "Bishop capture move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
 
                     pop_bit(attacks);
@@ -1186,10 +1335,16 @@ void generate_moves(){
                     bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
                     bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
                     if(is_target_square_empty){
-                        std::cout << "Rook move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::R) + (color_to_move*6), MoveType::quiet_move);
+                        moves.push_back(move);
+                        // std::cout << "Rook move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else if(is_enemy){
-                        std::cout << "Rook capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::R) + (color_to_move*6), MoveType::capture);
+                        moves.push_back(move);
+                        // std::cout << "Rook capture move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
 
                     pop_bit(attacks);
@@ -1206,10 +1361,16 @@ void generate_moves(){
                     bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
                     bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
                     if(is_target_square_empty){
-                        std::cout << "Queen move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::Q) + (color_to_move*6), MoveType::quiet_move);
+                        moves.push_back(move);
+                        // std::cout << "Queen move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else if(is_enemy){
-                        std::cout << "Queen capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::Q) + (color_to_move*6), MoveType::capture);
+                        moves.push_back(move);
+                        // std::cout << "Queen capture move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
 
                     pop_bit(attacks);
@@ -1226,10 +1387,16 @@ void generate_moves(){
                     bool is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
                     bool is_enemy = color_occupancy_bitboards[!color_to_move] & (1ULL << to_square);
                     if(is_target_square_empty){
-                        std::cout << "King move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::K) + (color_to_move*6), MoveType::quiet_move);
+                        moves.push_back(move);
+                        // std::cout << "King move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
                     else if(is_enemy){
-                        std::cout << "King capture move: " << square_str[from_square] << square_str[to_square] << "\n";
+                        Move move;
+                        move.encode_move(from_square, to_square, static_cast<int>(PIECE::K) + (color_to_move*6), MoveType::capture);
+                        moves.push_back(move);
+                        // std::cout << "King capture move: " << square_str[from_square] << square_str[to_square] << "\n";
                     }
 
                     pop_bit(attacks);
@@ -1250,7 +1417,10 @@ void generate_moves(){
                             // king and square next to him is not under attack
                             // is NOT attacked (e1) && is NOT attacked (d1)
                             if(!is_square_attacked_by(static_cast<int>(SQUARE::e1), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::d1), !color_to_move)){
-                                std::cout << "White queenside castle: e1c1 O-O-O \n";
+                                // std::cout << "White queenside castle: e1c1 O-O-O \n";
+                                Move move;
+                                move.encode_move(from_square, to_square, static_cast<int>(PIECE::K) + (color_to_move*6), MoveType::queen_castle);
+                                moves.push_back(move);
                             }
                         }
                     }
@@ -1262,7 +1432,10 @@ void generate_moves(){
                             // king and square next to him is not under attack
                             // is NOT attacked (e1) && is NOT attacked (f1)
                             if(!is_square_attacked_by(static_cast<int>(SQUARE::e1), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::f1), !color_to_move)){
-                                std::cout << "White kingside castle: e1g1 O-O \n";
+                                // std::cout << "White kingside castle: e1g1 O-O \n";
+                                Move move;
+                                move.encode_move(from_square, to_square, static_cast<int>(PIECE::K) + (color_to_move*6), MoveType::king_castle);
+                                moves.push_back(move);
                             }
                         }
                     }
@@ -1274,7 +1447,10 @@ void generate_moves(){
                             // king and square next to him is not under attack
                             // is NOT attacked (e8) && is NOT attacked (d8)
                             if(!is_square_attacked_by(static_cast<int>(SQUARE::e8), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::d8), !color_to_move)){
-                                std::cout << "Black queenside castle: e8c8 O-O-O \n";
+                                // std::cout << "Black queenside castle: e8c8 O-O-O \n";
+                                Move move;
+                                move.encode_move(from_square, to_square, static_cast<int>(PIECE::K) + (color_to_move*6), MoveType::queen_castle);
+                                moves.push_back(move);
                             }
                         }
                     }
@@ -1286,7 +1462,10 @@ void generate_moves(){
                             // king and square next to him is not under attack
                             // is NOT attacked (e8) && is NOT attacked (f8)
                             if(!is_square_attacked_by(static_cast<int>(SQUARE::e8), !color_to_move) && !is_square_attacked_by(static_cast<int>(SQUARE::f8), !color_to_move)){
-                                std::cout << "Black kingside castle: e8g8 O-O \n";
+                                // std::cout << "Black kingside castle: e8g8 O-O \n";
+                                Move move;
+                                move.encode_move(from_square, to_square, static_cast<int>(PIECE::K) + (color_to_move*6), MoveType::king_castle);
+                                moves.push_back(move);
                             }
                         }
                     }
@@ -1297,111 +1476,10 @@ void generate_moves(){
             // remove LS1B
             pop_bit(pice_bitboard_copy);
         }
-
-        
     }
+
+    return moves;
 }
-
-// ----------------------------------------------------------------------------|
-// | MOVE ENCODING                                                             |
-// ----------------------------------------------------------------------------|
-// | 20 bits                                                                   |
-// | 0000 0000 0000 0011 1111 from square === 0x3f                             |
-// | 0000 0000 1111 1100 0000 to square   === 0xfc0                            |
-// | 0000 1111 0000 0000 0000 piece       === 0xf000                           |
-// | 1111 0000 0000 0000 0000 flags       === 0xf0000                          |
-// |---------------------------------------------------------------------------|
-// |                             FLAG ENCODING                                 |
-// |---------------------------------------------------------------------------|
-// | code | promotion | capture | special 1 | special 0 |     kind of move     |        
-// |---------------------------------------------------------------------------|
-// |  0	  |     0     |    0    |     0     |     0     | quiet moves          |
-// |  1	  |     0     |    0    |     0     |     1     | double pawn push     |
-// |  2	  |     0     |    0    |     1     |     0     | king castle          |
-// |  3	  |     0     |    0    |     1     |     1     | queen castle         |
-// |  4	  |     0     |    1    |     0     |     0     | captures             |
-// |  5	  |     0     |    1    |     0     |     1     | ep-capture           |
-// |  8	  |     1     |    0    |     0     |     0     | knight-promotion     |
-// |  9	  |     1     |    0    |     0     |     1     | bishop-promotion     |
-// |  10  |     1     |    0    |     1     |     0     | rook-promotion       |
-// |  11  |     1     |    0    |     1     |     1     | queen-promotion      |
-// |  12  |     1     |    1    |     0     |     0     | knight-promo capture |
-// |  13  |     1     |    1    |     0     |     1     | bishop-promo capture |
-// |  14  |     1     |    1    |     1     |     0     | rook-promo capture   |
-// |  15  |     1     |    1    |     1     |     1     | queen-promo capture  |
-// -----------------------------------------------------------------------------
-
-enum class MoveType{
-    quiet_move = 0,
-    double_pawn_push = 1,
-    king_castle = 2,
-    queen_castle = 3,
-    capture = 4,
-    en_passant_capture = 5,
-    knight_promotion = 8,
-    bishop_promotion = 9,
-    rook_promotion = 10,
-    queen_promotion = 11,
-    knight_promo_capture = 12,
-    bishop_promo_capture = 13,
-    rook_promo_capture = 14,
-    queen_promo_capture = 15
-};
-
-const std::string move_type_str[16] = {
-    "quiet_move",
-    "double_pawn_push",
-    "king_castle",
-    "queen_castle",
-    "capture", 
-    "en_passant_capture",
-    "undefined move type",
-    "undefined move type",
-    "knight_promotion",
-    "bishop_promotion",
-    "rook_promotion",
-    "queen_promotion",
-    "knight_promo_capture",
-    "bishop_promo_capture",
-    "rook_promo_capture",
-    "queen_promo_capture" 
-};
-
-class Move{
-public:
-    // todo
-    //? todo -> ?unsigned?
-    unsigned int encoded_value = 0;
-
-    inline int get_from_square(){
-        return (encoded_value & 0x3f);
-    }
-
-    int get_to_square(){
-        return ((encoded_value & 0xfc0) >> 6);
-    }
-
-    int get_piece(){
-        return ((encoded_value & 0xf000) >> 12);
-    }
-
-    int get_move_type(){
-        return ((encoded_value & 0xf000) >> 16);
-    }
-
-    void encode_move(int from_square, int to_square, int piece, MoveType move_type){
-        encoded_value = 0;
-        encoded_value |= from_square;
-        encoded_value |= (to_square << 6);
-        encoded_value |= (piece << 12);
-        encoded_value |= (static_cast<int>(move_type) << 16);
-    }
-
-    void print(){
-        std::cout << "Move: " << square_str[this->get_from_square()] << square_str[this->get_to_square()] << " " 
-        << ascii_pieces[this->get_piece()] << " " << move_type_str[this->get_move_type()] << "\n";
-    }
-};
 
 // ************************************
 // *          VISUALISATION
@@ -1549,71 +1627,50 @@ void print_game_state(){
 
 int main(int argc, char const *argv[])
 {
-    U64 board = 0ULL;
-    both_occupancy_bitboard = 0ULL;
+    // U64 board = 0ULL;
+    // both_occupancy_bitboard = 0ULL;
 
     init_all_lookup_tables();
 
     // load_fen("");
-    /* load_fen("R7/8/8/8/8/8/8/8 w - - 0 1"); // white rook e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+    // load_fen("R7/8/8/8/8/8/8/8 w - - 0 1"); // white rook e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
 
-    load_fen("r7/8/8/8/8/8/8/8 w - - 0 1"); // black rook e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+    // load_fen("r7/8/8/8/8/8/8/8 w - - 0 1"); // black rook e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
 
-    load_fen("B7/8/8/8/8/8/8/8 w - - 0 1"); // white bishop e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+    // load_fen("B7/8/8/8/8/8/8/8 w - - 0 1"); // white bishop e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
 
-    load_fen("b7/8/8/8/8/8/8/8 w - - 0 1"); // black bishop e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+    // load_fen("b7/8/8/8/8/8/8/8 w - - 0 1"); // black bishop e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
 
-    load_fen("N7/8/8/8/8/8/8/8 w - - 0 1"); // white knight e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+    // load_fen("N7/8/8/8/8/8/8/8 w - - 0 1"); // white knight e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
 
-    load_fen("n7/8/8/8/8/8/8/8 w - - 0 1"); // black knight e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+    // load_fen("n7/8/8/8/8/8/8/8 w - - 0 1"); // black knight e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
 
     load_fen("K7/8/8/8/8/8/8/8 w - - 0 1"); // white king e4
     print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
 
-    load_fen("k7/8/8/8/8/8/8/8 w - - 0 1"); // black king e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
+    // load_fen("k7/8/8/8/8/8/8/8 w - - 0 1"); // black king e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
 
-    load_fen("Q7/8/8/8/8/8/8/8 w - - 0 1"); // white queen e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+    // load_fen("Q7/8/8/8/8/8/8/8 w - - 0 1"); // white queen e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
     
-    load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::black )); */
+    // load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
+    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
 
     // load_fen("4k3/8/8/8/4pP2/8/8/4K3 b - f3 0 1");
-    // print_board_unicode();
     // generate_moves();
+    // print_board_unicode();
 
 
-    Move m;
-    m.encode_move(0,8,0,MoveType::quiet_move);
-
-    m.print();
-    // WQ
-    // 14ULL
-    // 0xe
-
-    // WK
-    // 96ULL
-    // 0x60
-
-    // BQ
-    // 1008806316530991104ULL
-    // 0xe00000000000000
-
-    // BK
-    // 0x6000000000000000
-    // 6917529027641081856ULL
-
-
-
-
-    // load_fen("");
+    for(Move m : generate_moves()){
+        m.print();
+    }
 
     return 0;
 }
