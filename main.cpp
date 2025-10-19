@@ -1013,7 +1013,6 @@ void generate_magic_numbers(bool rook){
             }
             
             if(!fail){
-                // todo
                 // magic number is correct
                 correct_numbers++;
                 
@@ -1174,7 +1173,6 @@ std::vector<Move> generate_moves(){
         {
             from_square = get_LS1B(pice_bitboard_copy);
 
-            // todo capture en passasnt
             //* pawn moves
             if(piece == static_cast<int>(PIECE::P) || piece == static_cast<int>(PIECE::p)){
                 bool is_on_promotion = 
@@ -1263,7 +1261,6 @@ std::vector<Move> generate_moves(){
                     is_target_square_empty = ( both_occupancy_bitboard & (1ULL << to_square) ) == 0;
 
                     if(is_on_starting_rank && is_target_square_empty){
-                        // todo add en passant flag set
                         // std::cout << "Pawn double push: " << square_str[from_square] << square_str[to_square] << "\n";
                         Move move;
                         move.encode_move(from_square, to_square, static_cast<int>(PIECE::P) + (color_to_move*6), MoveType::double_pawn_push);
@@ -1625,52 +1622,286 @@ void print_game_state(){
 // *             MAIN
 // ************************************
 
+void copy_game_state(U64 ref_bitboards[12], U64 ref_color_occupancy_bitboards[2], U64 &ref_both_occupancy_bitboard, int &ref_castles, int &ref_color_to_move, int &ref_en_passant_square, int &ref_halfmove_counter, int &ref_fullmove_number){
+    // bitboards
+    for(int i = 0; i < 12; i++){
+        ref_bitboards[i] = bitboards[i];
+    }
+
+    ref_color_occupancy_bitboards[0] = color_occupancy_bitboards[0];
+    ref_color_occupancy_bitboards[1] = color_occupancy_bitboards[1];
+    ref_both_occupancy_bitboard =  both_occupancy_bitboard;
+
+    ref_castles = castles;
+    ref_color_to_move = color_to_move;
+    ref_en_passant_square = en_passant_square;
+    ref_halfmove_counter = halfmove_counter;
+    ref_fullmove_number = fullmove_number;
+}
+
+void load_game_state_from_copy(U64 ref_bitboards[12], U64 ref_color_occupancy_bitboards[2], U64 &ref_both_occupancy_bitboard, int &ref_castles, int &ref_color_to_move, int &ref_en_passant_square, int &ref_halfmove_counter, int &ref_fullmove_number){
+    // bitboards
+    for(int i = 0; i < 12; i++){
+        bitboards[i] = ref_bitboards[i];
+    }
+
+    color_occupancy_bitboards[0] = ref_color_occupancy_bitboards[0];
+    color_occupancy_bitboards[1] = ref_color_occupancy_bitboards[1];
+    both_occupancy_bitboard =  ref_both_occupancy_bitboard;
+
+    castles = ref_castles;
+    color_to_move = ref_color_to_move;
+    en_passant_square = ref_en_passant_square;
+    halfmove_counter = ref_halfmove_counter;
+    fullmove_number = ref_fullmove_number;
+}
+
+
+void make_move(Move move){
+    // GAME STATE UPDATE AT THE END OF FUNCTION DEFINITION
+    // color_to_move & color_occupancies & full- half move count
+    //
+    // enemy color occupancy update on CAPTURE MOVE block
+
+    // reset en passant square
+    // if double push flag will be set
+    en_passant_square = -1;
+
+    //* UPDATE CASTLE RIGHTS
+    // if rook ON A or H rank update castle rights
+    if(move.get_piece() == static_cast<int>(PIECE::R)){
+        if( A_FILE_MASK & (1ULL << move.get_from_square()) ){
+            // white queen
+            castles &= 0b0111;
+        }
+        else if( H_FILE_MASK & (1ULL << move.get_from_square()) ){
+            // white king
+            castles &= 0b1011;
+        }
+    }
+    else if(move.get_piece() == static_cast<int>(PIECE::r)){
+        if( A_FILE_MASK & (1ULL << move.get_from_square()) ){
+            // black queen
+            castles &= 0b1101;
+        }
+        else if( H_FILE_MASK & (1ULL << move.get_from_square()) ){
+            // black king
+            castles &= 0b1110;
+        }
+    }
+
+    // if king remove castle right for that color
+    else if(move.get_piece() == static_cast<int>(PIECE::K)){
+        // white
+        castles &= 0b0011;
+    }
+    else if(move.get_piece() == static_cast<int>(PIECE::K)){
+        // black
+        castles &= 0b1100;
+    }
+
+
+    //* QUIET MOVE
+    if(move.get_move_type() == static_cast<int>(MoveType::quiet_move)){
+        // UPDATE BITBOARDS [PICES]
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
+    }
+
+
+    //* CAPTURE
+    if(move.get_move_type() == static_cast<int>(MoveType::capture)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        
+        // remove target square
+        for(int i = 0; i < 6; i++){
+            bitboards[i+((!color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
+        }
+        // OCCUPANCIES
+        // remove target square
+        color_occupancy_bitboards[!color_to_move] &= ~( 1ULL << move.get_to_square() );
+        
+        // set target square
+        bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
+
+    }
+
+    
+    //* MoveType::double_pawn_push
+    // double push
+    // sett en passant flag
+    if(move.get_move_type() == static_cast<int>(MoveType::double_pawn_push)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
+
+        // set en passant square
+        en_passant_square = (move.get_from_square() + move.get_to_square()) / 2;
+    }
+
+
+    //* MoveType::en_passant_capture
+    if(move.get_move_type() == static_cast<int>(MoveType::en_passant_capture)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
+
+        // remove enemy pawn
+        // to target square add offset (for white -8 for black +8)
+        const int enemy_pawn_square = move.get_to_square() + (color_to_move*2 - 1)*8;
+        bitboards[static_cast<int>(PIECE::P) + ((!color_to_move)*6)] &= ~(1ULL << enemy_pawn_square);
+        // OCCUPANCIES
+        // remove target square
+        color_occupancy_bitboards[!color_to_move] &= ~(1ULL << enemy_pawn_square);
+    }
+
+    //* PAWN PROMOTION
+    // rook
+    if(move.get_move_type() == static_cast<int>(MoveType::rook_promotion)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[static_cast<int>(PIECE::R) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+    // bishop
+    else if(move.get_move_type() == static_cast<int>(MoveType::bishop_promotion)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[static_cast<int>(PIECE::B) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+    // knight
+    else if(move.get_move_type() == static_cast<int>(MoveType::knight_promotion)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[static_cast<int>(PIECE::N) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+    // queen
+    else if(move.get_move_type() == static_cast<int>(MoveType::queen_promotion)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[static_cast<int>(PIECE::Q) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+
+    //* MoveType::rook_promo_capture
+    // rook
+    if(move.get_move_type() == static_cast<int>(MoveType::rook_promo_capture)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        
+        // remove target square
+        for(int i = 0; i < 6; i++){
+            bitboards[i+((!color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
+        }
+        // OCCUPANCIES
+        // remove target square
+        color_occupancy_bitboards[!color_to_move] &= ~( 1ULL << move.get_to_square() );
+
+        // set target square
+        bitboards[static_cast<int>(PIECE::R) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+    // bishop
+    else if(move.get_move_type() == static_cast<int>(MoveType::bishop_promo_capture)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+
+        // remove target square
+        for(int i = 0; i < 6; i++){
+            bitboards[i+((!color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
+        }
+        // OCCUPANCIES
+        // remove target square
+        color_occupancy_bitboards[!color_to_move] &= ~( 1ULL << move.get_to_square() );
+
+
+        // set target square
+        bitboards[static_cast<int>(PIECE::B) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+    // knight
+    else if(move.get_move_type() == static_cast<int>(MoveType::knight_promo_capture)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+
+        // remove target square
+        for(int i = 0; i < 6; i++){
+            bitboards[i+((!color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
+        }
+        // OCCUPANCIES
+        // remove target square
+        color_occupancy_bitboards[!color_to_move] &= ~( 1ULL << move.get_to_square() );
+
+        // set target square
+        bitboards[static_cast<int>(PIECE::N) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+    // queen
+    else if(move.get_move_type() == static_cast<int>(MoveType::queen_promo_capture)){
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+
+        // remove target square
+        for(int i = 0; i < 6; i++){
+            bitboards[i+((!color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
+        }
+        // OCCUPANCIES
+        // remove target square
+        color_occupancy_bitboards[!color_to_move] &= ~( 1ULL << move.get_to_square() );
+
+        // set target square
+        bitboards[static_cast<int>(PIECE::Q) + (color_to_move*6)] |= 1ULL << move.get_to_square();
+    }
+
+    //* MoveType::king_castle
+
+
+    //* MoveType::queen_castle
+
+
+
+    // update game state
+    halfmove_counter += 1;
+    fullmove_number = halfmove_counter/2;
+
+    // UPDATE OCCUPANCIES [COLOR]
+    // remove from square
+    color_occupancy_bitboards[color_to_move] &= ~( 1ULL << move.get_from_square() );
+    // add target square
+    color_occupancy_bitboards[color_to_move] |= 1ULL << move.get_to_square();
+    both_occupancy_bitboard = color_occupancy_bitboards[0] | color_occupancy_bitboards[1];
+
+    // update color to move game state
+    color_to_move = !color_to_move;
+}
+
 int main(int argc, char const *argv[])
 {
+    init_all_lookup_tables();
     // U64 board = 0ULL;
     // both_occupancy_bitboard = 0ULL;
 
-    init_all_lookup_tables();
 
-    // load_fen("");
-    // load_fen("R7/8/8/8/8/8/8/8 w - - 0 1"); // white rook e4
+    // 1. save game state
+
+    // 2. make move
+
+    // 3. load game state
+
+
+
+
+    // load_fen("K7/8/8/8/8/8/8/8 w - - 0 1"); // white king e4
     // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
 
-    // load_fen("r7/8/8/8/8/8/8/8 w - - 0 1"); // black rook e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
 
-    // load_fen("B7/8/8/8/8/8/8/8 w - - 0 1"); // white bishop e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
-
-    // load_fen("b7/8/8/8/8/8/8/8 w - - 0 1"); // black bishop e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
-
-    // load_fen("N7/8/8/8/8/8/8/8 w - - 0 1"); // white knight e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
-
-    // load_fen("n7/8/8/8/8/8/8/8 w - - 0 1"); // black knight e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
-
-    load_fen("K7/8/8/8/8/8/8/8 w - - 0 1"); // white king e4
-    print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
-
-    // load_fen("k7/8/8/8/8/8/8/8 w - - 0 1"); // black king e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
-
-    // load_fen("Q7/8/8/8/8/8/8/8 w - - 0 1"); // white queen e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
-    
-    // load_fen("q7/8/8/8/8/8/8/8 w - - 0 1"); // black queen e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::black ));
-
-    // load_fen("4k3/8/8/8/4pP2/8/8/4K3 b - f3 0 1");
-    // generate_moves();
-    // print_board_unicode();
-
-
-    for(Move m : generate_moves()){
-        m.print();
-    }
+    // for(Move m : generate_moves()){
+    //     m.print();
+    // }
 
     return 0;
 }
