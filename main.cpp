@@ -1956,3 +1956,12 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
+
+// todo
+// - refractor
+// - - game class or game state
+// - - separate into files
+// - - rewirte copy and load (milion arguments => object reference)
+// - test generate moves (perf)
+// - test make move & take back move (copy and save game state)
+// - GUI
