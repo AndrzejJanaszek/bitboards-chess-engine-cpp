@@ -425,7 +425,7 @@ public:
     }
 
     int get_move_type(){
-        return ((encoded_value & 0xf000) >> 16);
+        return ((encoded_value & 0xf0000) >> 16);
     }
 
     void encode_move(int from_square, int to_square, int piece, MoveType move_type){
@@ -1717,7 +1717,7 @@ void make_move(Move move){
         bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
         
         // remove target square
-        for(int i = 0; i < 6; i++){
+        for(int i = static_cast<int>(PIECE::P); i < static_cast<int>(PIECE::p); i++){
             bitboards[i+((!color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
         }
         // OCCUPANCIES
@@ -1858,10 +1858,42 @@ void make_move(Move move){
     }
 
     //* MoveType::king_castle
+    if(move.get_move_type() == static_cast<int>(MoveType::king_castle)){
+        // king
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[static_cast<int>(PIECE::K) + (color_to_move*6)] |= 1ULL << move.get_to_square();
 
+        // rook
+        const int rook_target_square = (move.get_from_square() + move.get_to_square())/2;
+        const int rook_from_square = color_to_move ? static_cast<int>(SQUARE::h8) : static_cast<int>(SQUARE::h1);
+        // remove rook
+        bitboards[rook_from_square] &= ~(1ULL << move.get_from_square());
+        //set rook
+        bitboards[static_cast<int>(PIECE::R) + (color_to_move*6)] |= 1ULL << rook_target_square;
+
+        // castle rights updated at the start of function
+    }
 
     //* MoveType::queen_castle
+    if(move.get_move_type() == static_cast<int>(MoveType::queen_castle)){
+        // king
+        // remove from square
+        bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
+        // set target square
+        bitboards[static_cast<int>(PIECE::K) + (color_to_move*6)] |= 1ULL << move.get_to_square();
 
+        // rook
+        const int rook_target_square = (move.get_from_square() + move.get_to_square())/2;
+        const int rook_from_square = color_to_move ? static_cast<int>(SQUARE::a8) : static_cast<int>(SQUARE::a1);
+        // remove rook
+        bitboards[rook_from_square] &= ~(1ULL << move.get_from_square());
+        //set rook
+        bitboards[static_cast<int>(PIECE::R) + (color_to_move*6)] |= 1ULL << rook_target_square;
+
+        // castle rights updated at the start of function
+    }
 
 
     // update game state
@@ -1885,13 +1917,32 @@ int main(int argc, char const *argv[])
     // U64 board = 0ULL;
     // both_occupancy_bitboard = 0ULL;
 
+    // load fen
+    load_fen("8/8/8/8/8/3p4/4P3/8 w - - 0 1"); // white king e4
 
-    // 1. save game state
+    // for each move
+    char a;
+    for(Move m : generate_moves()){
+        m.print();
+        print_board_unicode();
+        std::cin >> a;
 
-    // 2. make move
+        U64 ref_bitboards[12];
+        U64 ref_color_occupancy_bitboards[2];
+        U64 ref_both_occupancy_bitboard;
+        int ref_castles;
+        int ref_color_to_move;
+        int ref_en_passant_square;
+        int ref_halfmove_counter;
+        int ref_fullmove_number;
+        copy_game_state(ref_bitboards, ref_color_occupancy_bitboards, ref_both_occupancy_bitboard, ref_castles, ref_color_to_move, ref_en_passant_square, ref_halfmove_counter, ref_fullmove_number);
+        
+        make_move(m);
+        print_board_unicode();
+        std::cin >> a;
 
-    // 3. load game state
-
+        load_game_state_from_copy(ref_bitboards, ref_color_occupancy_bitboards, ref_both_occupancy_bitboard, ref_castles, ref_color_to_move, ref_en_passant_square, ref_halfmove_counter, ref_fullmove_number);
+    }
 
 
 
@@ -1905,6 +1956,3 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
-
-// todo list
-// 1. quuen attakcs
