@@ -10,7 +10,7 @@
 
 using U64 = uint64_t;
 
-class GameState{
+class Board{
 public:
     // bitboards; index: PIECE enum
     U64 bitboards[12] = {0ULL};
@@ -37,7 +37,7 @@ public:
     int fullmove_number = 1;
 
     // przeciążenie operatora przypisania
-    GameState &operator=(const GameState &other);
+    Board &operator=(const Board &other);
 
     void clear_bitboards();
 
@@ -46,5 +46,5 @@ public:
     void print_game_state();
     void print_board_unicode();
 
-    void print_board_ascii(GameState &game_state);
+    void print_board_ascii(Board &game_state);
 };

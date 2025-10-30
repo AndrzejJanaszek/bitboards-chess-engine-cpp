@@ -80,302 +80,155 @@ void print_bitboard_bits(const U64 &bitboard){
 // *             MAIN
 // ************************************
 
-void make_move(Move move, GameState &game_state){
-    // GAME STATE UPDATE AT THE END OF FUNCTION DEFINITION
-    // color_to_move & color_occupancies & full- half move count
-    //
-    // enemy color occupancy update on CAPTURE MOVE block
+struct PerftMovesCount
+{
+    unsigned long long count = 0;
+    unsigned long long captures = 0;
+    unsigned long long en_pasants = 0;
+    unsigned long long checks = 0;
+    unsigned long long checkmates = 0;
+    unsigned long long castles = 0;
+    unsigned long long promotion = 0;
+};
 
-    // reset en passant square
-    // if double push flag will be set
-    game_state.en_passant_square = -1;
+void printPerftObject(PerftMovesCount obj){
+    printf("count: %llu, captures: %llu, ep: %llu, castles: %llu, promotion: %llu, checks: %llu, checkmates: %llu\n",
+            obj.count, obj.captures, obj.en_pasants, obj.castles, obj.promotion, obj.checks, obj.checkmates);
+}
 
-    //* UPDATE CASTLE RIGHTS
-    // if rook ON A or H rank update castle rights
-    if(move.get_piece() == static_cast<int>(PIECE::R)){
-        if( A_FILE_MASK & (1ULL << move.get_from_square()) ){
-            // white queen
-            game_state.castles &= 0b0111;
+bool isKingUnderAttack(Board &board){
+    int king_square = get_LS1B(board.bitboards[static_cast<int>(PIECE::K) + (board.color_to_move*6)]);
+
+    if(king_square > 63){
+        throw std::runtime_error("Squre > 64 propably no king");
+    }
+
+    return is_square_attacked_by(king_square, !board.color_to_move, board);
+}
+
+bool isCheckMate(Board &board){
+    if(isKingUnderAttack(board) && generate_legal_moves(board).size() == 0){
+        return true;
+    }
+
+    return false;
+}
+
+PerftMovesCount perf(int depth, Board &board){
+    PerftMovesCount moves_count;
+
+    if(depth == 0){
+        return moves_count;
+    }
+
+    if(depth == 1){
+        auto moves = generate_legal_moves(board);
+
+        for(const Move &move : moves){
+            if (move.get_move_type() & static_cast<int>(MoveType::capture)){
+                moves_count.captures += 1;
+            }
+            
+            if (move.get_move_type() == static_cast<int>(MoveType::en_passant_capture)){
+                moves_count.en_pasants += 1;
+            }
+
+            if (move.get_move_type() == static_cast<int>(MoveType::king_castle) || move.get_move_type() == static_cast<int>(MoveType::queen_castle)){
+                moves_count.castles += 1;
+            }
+
+            if (move.get_move_type() & static_cast<int>(MoveType::knight_promotion)){
+                moves_count.promotion += 1;
+            }
+            
+            Board copy = board;
+            make_move(move, copy);
+            if( isKingUnderAttack(copy) ){
+                moves_count.checks += 1;
+            }
+
+            if(isCheckMate(copy)){
+                moves_count.checkmates += 1;
+            }
         }
-        else if( H_FILE_MASK & (1ULL << move.get_from_square()) ){
-            // white king
-            game_state.castles &= 0b1011;
-        }
+
+        moves_count.count = moves.size();
+
+        return moves_count;
     }
-    else if(move.get_piece() == static_cast<int>(PIECE::r)){
-        if( A_FILE_MASK & (1ULL << move.get_from_square()) ){
-            // black queen
-            game_state.castles &= 0b1101;
-        }
-        else if( H_FILE_MASK & (1ULL << move.get_from_square()) ){
-            // black king
-            game_state.castles &= 0b1110;
-        }
-    }
-
-    // if king remove castle right for that color
-    else if(move.get_piece() == static_cast<int>(PIECE::K)){
-        // white
-        game_state.castles &= 0b0011;
-    }
-    else if(move.get_piece() == static_cast<int>(PIECE::K)){
-        // black
-        game_state.castles &= 0b1100;
-    }
-
-
-    //* QUIET MOVE
-    if(move.get_move_type() == static_cast<int>(MoveType::quiet_move)){
-        // UPDATE BITBOARDS [PICES]
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
-    }
-
-
-    //* CAPTURE
-    if(move.get_move_type() == static_cast<int>(MoveType::capture)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        
-        // remove target square
-        for(int i = static_cast<int>(PIECE::P); i < static_cast<int>(PIECE::p); i++){
-            game_state.bitboards[i+((!game_state.color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
-        }
-        // OCCUPANCIES
-        // remove target square
-        game_state.color_occupancy_bitboards[!game_state.color_to_move] &= ~( 1ULL << move.get_to_square() );
-        
-        // set target square
-        game_state.bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
-
-    }
-
     
-    //* MoveType::double_pawn_push
-    // double push
-    // sett en passant flag
-    if(move.get_move_type() == static_cast<int>(MoveType::double_pawn_push)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
+    auto moves = generate_legal_moves(board);
 
-        // set en passant square
-        game_state.en_passant_square = (move.get_from_square() + move.get_to_square()) / 2;
+    for(const Move &move : moves){
+        Board copy = board;
+        make_move(move, copy);
+
+        PerftMovesCount new_count = perf(depth-1, copy);
+        moves_count.count += new_count.count;
+        moves_count.captures += new_count.captures;
+        moves_count.en_pasants += new_count.en_pasants;
+        moves_count.checks += new_count.checks;
+        moves_count.checkmates += new_count.checkmates;
+        moves_count.castles += new_count.castles;
+        moves_count.promotion += new_count.promotion;
     }
 
-
-    //* MoveType::en_passant_capture
-    if(move.get_move_type() == static_cast<int>(MoveType::en_passant_capture)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[move.get_piece()] |= 1ULL << move.get_to_square();
-
-        // remove enemy pawn
-        // to target square add offset (for white -8 for black +8)
-        const int enemy_pawn_square = move.get_to_square() + (game_state.color_to_move*2 - 1)*8;
-        game_state.bitboards[static_cast<int>(PIECE::P) + ((!game_state.color_to_move)*6)] &= ~(1ULL << enemy_pawn_square);
-        // OCCUPANCIES
-        // remove target square
-        game_state.color_occupancy_bitboards[!game_state.color_to_move] &= ~(1ULL << enemy_pawn_square);
-    }
-
-    //* PAWN PROMOTION
-    // rook
-    if(move.get_move_type() == static_cast<int>(MoveType::rook_promotion)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::R) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-    // bishop
-    else if(move.get_move_type() == static_cast<int>(MoveType::bishop_promotion)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::B) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-    // knight
-    else if(move.get_move_type() == static_cast<int>(MoveType::knight_promotion)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::N) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-    // queen
-    else if(move.get_move_type() == static_cast<int>(MoveType::queen_promotion)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::Q) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-
-    //* MoveType::rook_promo_capture
-    // rook
-    if(move.get_move_type() == static_cast<int>(MoveType::rook_promo_capture)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        
-        // remove target square
-        for(int i = 0; i < 6; i++){
-            game_state.bitboards[i+((!game_state.color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
-        }
-        // OCCUPANCIES
-        // remove target square
-        game_state.color_occupancy_bitboards[!game_state.color_to_move] &= ~( 1ULL << move.get_to_square() );
-
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::R) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-    // bishop
-    else if(move.get_move_type() == static_cast<int>(MoveType::bishop_promo_capture)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-
-        // remove target square
-        for(int i = 0; i < 6; i++){
-            game_state.bitboards[i+((!game_state.color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
-        }
-        // OCCUPANCIES
-        // remove target square
-        game_state.color_occupancy_bitboards[!game_state.color_to_move] &= ~( 1ULL << move.get_to_square() );
-
-
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::B) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-    // knight
-    else if(move.get_move_type() == static_cast<int>(MoveType::knight_promo_capture)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-
-        // remove target square
-        for(int i = 0; i < 6; i++){
-            game_state.bitboards[i+((!game_state.color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
-        }
-        // OCCUPANCIES
-        // remove target square
-        game_state.color_occupancy_bitboards[!game_state.color_to_move] &= ~( 1ULL << move.get_to_square() );
-
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::N) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-    // queen
-    else if(move.get_move_type() == static_cast<int>(MoveType::queen_promo_capture)){
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-
-        // remove target square
-        for(int i = 0; i < 6; i++){
-            game_state.bitboards[i+((!game_state.color_to_move)*6)] &= ~( 1ULL << move.get_to_square() );
-        }
-        // OCCUPANCIES
-        // remove target square
-        game_state.color_occupancy_bitboards[!game_state.color_to_move] &= ~( 1ULL << move.get_to_square() );
-
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::Q) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-    }
-
-    //* MoveType::king_castle
-    if(move.get_move_type() == static_cast<int>(MoveType::king_castle)){
-        // king
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::K) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-
-        // rook
-        const int rook_target_square = (move.get_from_square() + move.get_to_square())/2;
-        const int rook_from_square = game_state.color_to_move ? static_cast<int>(SQUARE::h8) : static_cast<int>(SQUARE::h1);
-        // remove rook
-        game_state.bitboards[rook_from_square] &= ~(1ULL << move.get_from_square());
-        //set rook
-        game_state.bitboards[static_cast<int>(PIECE::R) + (game_state.color_to_move*6)] |= 1ULL << rook_target_square;
-
-        // castle rights updated at the start of function
-    }
-
-    //* MoveType::queen_castle
-    if(move.get_move_type() == static_cast<int>(MoveType::queen_castle)){
-        // king
-        // remove from square
-        game_state.bitboards[move.get_piece()] &= ~( 1ULL << move.get_from_square() );
-        // set target square
-        game_state.bitboards[static_cast<int>(PIECE::K) + (game_state.color_to_move*6)] |= 1ULL << move.get_to_square();
-
-        // rook
-        const int rook_target_square = (move.get_from_square() + move.get_to_square())/2;
-        const int rook_from_square = game_state.color_to_move ? static_cast<int>(SQUARE::a8) : static_cast<int>(SQUARE::a1);
-        // remove rook
-        game_state.bitboards[rook_from_square] &= ~(1ULL << move.get_from_square());
-        //set rook
-        game_state.bitboards[static_cast<int>(PIECE::R) + (game_state.color_to_move*6)] |= 1ULL << rook_target_square;
-
-        // castle rights updated at the start of function
-    }
-
-
-    // update game state
-    game_state.halfmove_counter += 1;
-    game_state.fullmove_number = game_state.halfmove_counter/2;
-
-    // UPDATE OCCUPANCIES [COLOR]
-    // remove from square
-    game_state.color_occupancy_bitboards[game_state.color_to_move] &= ~( 1ULL << move.get_from_square() );
-    // add target square
-    game_state.color_occupancy_bitboards[game_state.color_to_move] |= 1ULL << move.get_to_square();
-    game_state.both_occupancy_bitboard = game_state.color_occupancy_bitboards[0] | game_state.color_occupancy_bitboards[1];
-
-    // update color to move game state
-    game_state.color_to_move = !game_state.color_to_move;
+    return moves_count;
 }
 
 int main(int argc, char const *argv[])
 {
-    GameState game_state;
-    init_all_lookup_tables(game_state);
-    // U64 board = 0ULL;
-    // both_occupancy_bitboard = 0ULL;
-
+    // ------------------------------------------------------
+    // INIT
+    Board board;
+    init_all_lookup_tables(board);
+    
     // load fen
-    game_state.load_fen("8/8/8/8/8/3p4/4P3/8 w - - 0 1"); // white king e4
+    // board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // starting
+    board.load_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"); // starting
+    // board.load_fen("k7/8/8/8/8/8/8/K3Q3 w - - 0 1");
 
-    // for each move
-    char a;
-    for(Move m : generate_moves(game_state)){
-        m.print();
-        game_state.print_board_unicode();
-        std::cin >> a;
+    // ------------------------------------------------------
 
-        GameState game_state_copy = game_state;
-        
-        make_move(m, game_state_copy);
-        game_state_copy.print_board_unicode();
-        std::cin >> a;
+    auto moves = generate_moves(board);
+    // auto moves = generate_legal_moves(board);
+
+    char c;
+    for(const Move & move : moves){
+        move.print();
+        // std::cin >> c;
     }
 
+    /* U64 test = 0ULL;
+
+    for(int i = 0; i < 64; i++){
+        if(is_square_attacked_by(i, 1, board)){
+            test |= (1ULL << i);
+        }
+    }
+
+    print_bitboard_bits(test); */
 
 
-    // load_fen("K7/8/8/8/8/8/8/8 w - - 0 1"); // white king e4
-    // print_bitboard_bits(get_attacked_squares( (int)COLOR::white ));
+    // std::cout << isKingUnderAttack(board);
 
+    for(int i = 1; i < 8; i++){
+        printf("%d: ", i);
+        PerftMovesCount pmc = perf(i, board);
+        printPerftObject(pmc);
+    }
 
-    // for(Move m : generate_moves()){
-    //     m.print();
-    // }
-
+    // printf("1: count: %llu, captures: %llu, en_pasants: %llu, checks: %llu, checkmates: %llu  \n", pmc1.count, pmc1.en_pasants, pmc1.captures, pmc1.checks,  pmc1.checkmates);
+    // printf("2: count: %llu, captures: %llu, en_pasants: %llu, checks: %llu, checkmates: %llu  \n", pmc2.count, pmc2.en_pasants, pmc2.captures, pmc2.checks,  pmc2.checkmates);
+    // printf("3: count: %llu, captures: %llu, en_pasants: %llu, checks: %llu, checkmates: %llu  \n", pmc3.count, pmc3.en_pasants, pmc3.captures, pmc3.checks,  pmc3.checkmates);
+    // printf("4: count: %llu, captures: %llu, en_pasants: %llu, checks: %llu, checkmates: %llu  \n", pmc4.count, pmc4.en_pasants, pmc4.captures, pmc4.checks,  pmc4.checkmates);
+    // printf("5: count: %llu, captures: %llu, en_pasants: %llu, checks: %llu, checkmates: %llu  \n", pmc5.count, pmc5.en_pasants, pmc5.captures, pmc5.checks,  pmc5.checkmates);
+    
+    
     return 0;
 }
 
 // todo
-// - refractor
-// - - game class or game state
-// - - separate into files
-// - - rewirte copy and load (milion arguments => object reference)
 // - test generate moves (perf)
 // - test make move & take back move (copy and save game state)
 // - GUI

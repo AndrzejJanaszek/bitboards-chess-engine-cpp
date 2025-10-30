@@ -6,7 +6,7 @@
 #include "visualisation.h"
 
 
-GameState& GameState::operator=(const GameState &other)
+Board& Board::operator=(const Board &other)
 {
     if (this != &other)
     {
@@ -28,7 +28,7 @@ GameState& GameState::operator=(const GameState &other)
     return *this;
 }
 
-void GameState::clear_bitboards()
+void Board::clear_bitboards()
     {
         for (U64 &b : bitboards)
             b = 0ULL;
@@ -38,7 +38,7 @@ void GameState::clear_bitboards()
         both_occupancy_bitboard = 0ULL;
     }
 
-void GameState::load_fen(std::string fen)
+void Board::load_fen(std::string fen)
 {
     // fen fragments
     // 1. piece data
@@ -182,7 +182,7 @@ void GameState::load_fen(std::string fen)
     fullmove_number = std::stoi(fen_fragments[5]);
 }
 
-void GameState::print_game_state()
+void Board::print_game_state()
 {
 
     printf("#############################\n");
@@ -227,7 +227,7 @@ void GameState::print_game_state()
     printf("---------------------------\n");
 }
 
-void GameState::print_board_unicode()
+void Board::print_board_unicode()
 {
     std::vector<std::string> pieces(64, ".");
 
@@ -252,7 +252,7 @@ void GameState::print_board_unicode()
     print_board_of_strings(pieces);
 }
 
-void GameState::print_board_ascii(GameState &game_state){
+void Board::print_board_ascii(Board &game_state){
     std::vector<std::string> pieces(64, "0");
 
 
