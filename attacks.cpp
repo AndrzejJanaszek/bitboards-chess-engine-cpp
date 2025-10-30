@@ -16,7 +16,7 @@ U64 king_lookup_attacks[64];
 U64 rook_lookup_attacks[64][4096];
 U64 bishop_lookup_attacks[64][512];
 
-U64 calculate_bishop_attacks(int square, GameState &game_state){
+U64 calculate_bishop_attacks(int square, Board &game_state){
     U64 attacks = 0ULL;
 
     // *up-right direction
@@ -84,7 +84,7 @@ U64 calculate_bishop_attacks(int square, GameState &game_state){
     return attacks;
 }
 
-U64 calculate_rook_attacks(int square, GameState &game_state){
+U64 calculate_rook_attacks(int square, Board &game_state){
     U64 attacks = 0ULL;
     // * up
     U64 cursor = 1ULL << square;
@@ -302,7 +302,7 @@ U64 knight_attacks(int square){
     
 }
 
-U64 rook_attacks(int square, GameState &game_state){
+U64 rook_attacks(int square, Board &game_state){
     U64 magic_number = rook_magic_numbers[square];
     U64 relevant_occupancy = rook_relevant_occupancy(square) & game_state.both_occupancy_bitboard;
     int magic_index = relevant_occupancy * magic_number >> (64-rook_relevant_occupancy_count[square]);
@@ -310,7 +310,7 @@ U64 rook_attacks(int square, GameState &game_state){
     return rook_lookup_attacks[square][magic_index];
 }
 
-U64 bishop_attacks(int square, GameState &game_state){
+U64 bishop_attacks(int square, Board &game_state){
     U64 magic_number = bishop_magic_numbers[square];
     U64 relevant_occupancy = bishop_relevant_occupancy(square) & game_state.both_occupancy_bitboard;
     int magic_index = relevant_occupancy * magic_number >> (64-bishop_relevant_occupancy_count[square]);
@@ -318,7 +318,7 @@ U64 bishop_attacks(int square, GameState &game_state){
     return bishop_lookup_attacks[square][magic_index];
 }
 
-U64 queen_attacks(int square, GameState &game_state){
+U64 queen_attacks(int square, Board &game_state){
     return (bishop_attacks(square, game_state) | rook_attacks(square, game_state));
 }
 
@@ -343,7 +343,7 @@ void print_relevant_occupancy_count_tables(){
     }
 }
 
-void generate_magic_numbers(bool rook, GameState &game_state){
+void generate_magic_numbers(bool rook, Board &game_state){
     // random number generator
     constexpr U64 SEED = 123456789ULL;
     std::mt19937_64 gen(SEED);
@@ -441,7 +441,7 @@ void generate_magic_numbers(bool rook, GameState &game_state){
     printf("correct numbers: %d\n",correct_numbers);
 }
 
-void init_rook_bishop_lookup_tables(bool rook, GameState &game_state){
+void init_rook_bishop_lookup_tables(bool rook, Board &game_state){
     for(int square = 0; square < 64; square++){
         for(int variation = 0; (variation < (rook ? 4096 : 512)); variation++){
             U64 relevant_occupancy = 0ULL;
@@ -498,7 +498,7 @@ void init_knight_lookup_table(){
     }
 }
 
-void init_all_lookup_tables(GameState &game_state){
+void init_all_lookup_tables(Board &game_state){
     init_rook_bishop_lookup_tables(true, game_state);
     init_rook_bishop_lookup_tables(false, game_state);
     init_pawn_lookup_table();
