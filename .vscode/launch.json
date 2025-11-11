@@ -1,0 +1,57 @@
+{
+    "version": "2.0.0",
+    "configurations": [        
+        {
+            "name": "Debug GUI",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/gui/build/gui.exe",   // exe w katalogu build
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/gui/build",               // katalog roboczy = build
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build GUI with SFML"
+        },
+        {
+            "name": "Debug Engine",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/engine/build/engine_test.exe",  // <-- plik exe do debugowania
+            "args": [],                              
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/engine/build",  // <-- katalog roboczy
+            "environment": [],
+            "externalConsole": true,                  // <-- otwiera osobny terminal
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build Engine"
+        }
+    ]
+}

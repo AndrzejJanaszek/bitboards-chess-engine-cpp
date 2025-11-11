@@ -1,0 +1,62 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build GUI with SFML",
+            "type": "cppbuild",
+            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "args": [
+                "-std=c++20",
+                "-fdiagnostics-color=always",
+                "-g",
+                "-O0",
+                "-DSFML_STATIC",
+                "-I${workspaceFolder}/engine/include",
+                "-I${workspaceFolder}/SFML-3.0.2/include",
+                "${workspaceFolder}/gui/src/main.cpp",
+                "-L${workspaceFolder}/SFML-3.0.2/build/lib",
+                "-lsfml-graphics-s",
+                "-lsfml-window-s",
+                "-lsfml-system-s",
+                "-lgdi32",
+                "-lwinmm",
+                "-lopengl32",
+                "-luser32",
+                "-lole32",
+                "-lshell32",
+                "-limm32",
+                "-o", 
+                "${workspaceFolder}/gui/build/gui.exe"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/gui"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build Engine",
+            "type": "cppbuild",
+            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "args": [
+                "-std=c++20",
+                "-g",
+                "-O0",
+                "-I${workspaceFolder}/engine/include",
+                "${workspaceFolder}/engine/src/*.cpp",
+                "-o",
+                "${workspaceFolder}/engine/build/engine_test.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
