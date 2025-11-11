@@ -38,7 +38,7 @@ std::vector<Move> generate_moves(Board &game_state);
 
 // makes move on given board
 // returns 1 if legal; 0 if not legal
-int make_move(Move move, Board &board);
+void make_move(Move move, Board &board);
 
 std::vector<Move> generate_legal_moves(Board &game_state);
 
