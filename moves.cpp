@@ -392,7 +392,7 @@ std::vector<Move> generate_moves(Board &game_state){
 }
 
 
-int make_move(Move move, Board &board){
+void make_move(Move move, Board &board){
     // GAME STATE UPDATE AT THE END OF FUNCTION DEFINITION
     // color_to_move & color_occupancies & full- half move count
     //
@@ -645,12 +645,25 @@ int make_move(Move move, Board &board){
     // update color to move game state
     board.color_to_move = !board.color_to_move;
 
+    // // check wheter king is in check
+    // int king_square = get_LS1B(board.bitboards[static_cast<int>(PIECE::K) + (!board.color_to_move * 6)]);
+    // bool isLegal = !is_square_attacked_by(king_square, board.color_to_move, board);
+
+
+    // // return 1 if legal; 0 if not legal
+    // return isLegal;
+}
+
+bool isMoveLegal(Move &move, Board &current_board){
+    Board board_copy = current_board;
+
+    // make move
+    make_move(move, board_copy);
+
     // check wheter king is in check
-    int king_square = get_LS1B(board.bitboards[static_cast<int>(PIECE::K) + (!board.color_to_move * 6)]);
-    bool isLegal = !is_square_attacked_by(king_square, board.color_to_move, board);
+    int king_square = get_LS1B(board_copy.bitboards[static_cast<int>(PIECE::K) + (!board_copy.color_to_move * 6)]);
+    bool isLegal = !is_square_attacked_by(king_square, board_copy.color_to_move, board_copy);
 
-
-    // return 1 if legal; 0 if not legal
     return isLegal;
 }
 
@@ -659,11 +672,8 @@ std::vector<Move> generate_legal_moves(Board &game_state){
     std::vector<Move> legal_moves;
     legal_moves.reserve(pseudo_legal_moves.size());
 
-    Board board_copy;
     for(Move &move : pseudo_legal_moves){
-        board_copy = game_state;
-
-        int isLegal = make_move(move, board_copy);
+        bool isLegal = isMoveLegal(move, game_state);
         // printf("bool : %d\n", isLegal);
         if(isLegal){
             legal_moves.push_back(move);
