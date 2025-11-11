@@ -682,3 +682,21 @@ std::vector<Move> generate_legal_moves(Board &game_state){
 
     return legal_moves;
 }
+
+bool isKingUnderAttack(Board &board){
+    int king_square = get_LS1B(board.bitboards[static_cast<int>(PIECE::K) + (board.color_to_move*6)]);
+
+    if(king_square > 63){
+        throw std::runtime_error("Squre > 64 propably no king");
+    }
+
+    return is_square_attacked_by(king_square, !board.color_to_move, board);
+}
+
+bool isCheckMate(Board &board){
+    if(isKingUnderAttack(board) && generate_legal_moves(board).size() == 0){
+        return true;
+    }
+
+    return false;
+}

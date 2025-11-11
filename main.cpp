@@ -15,6 +15,7 @@
 #include "moves.h"
 #include "utility.h"
 #include "visualisation.h"
+#include "perft.h"
 
 
 using U64 = uint64_t;
@@ -80,101 +81,10 @@ void print_bitboard_bits(const U64 &bitboard){
 // *             MAIN
 // ************************************
 
-struct PerftMovesCount
-{
-    unsigned long long count = 0;
-    unsigned long long captures = 0;
-    unsigned long long en_pasants = 0;
-    unsigned long long checks = 0;
-    unsigned long long checkmates = 0;
-    unsigned long long castles = 0;
-    unsigned long long promotion = 0;
-};
 
-void printPerftObject(PerftMovesCount obj){
-    printf("count: %llu, captures: %llu, ep: %llu, castles: %llu, promotion: %llu, checks: %llu, checkmates: %llu\n",
-            obj.count, obj.captures, obj.en_pasants, obj.castles, obj.promotion, obj.checks, obj.checkmates);
-}
 
-bool isKingUnderAttack(Board &board){
-    int king_square = get_LS1B(board.bitboards[static_cast<int>(PIECE::K) + (board.color_to_move*6)]);
 
-    if(king_square > 63){
-        throw std::runtime_error("Squre > 64 propably no king");
-    }
 
-    return is_square_attacked_by(king_square, !board.color_to_move, board);
-}
-
-bool isCheckMate(Board &board){
-    if(isKingUnderAttack(board) && generate_legal_moves(board).size() == 0){
-        return true;
-    }
-
-    return false;
-}
-
-PerftMovesCount perf(int depth, Board &board){
-    PerftMovesCount moves_count;
-
-    if(depth == 0){
-        return moves_count;
-    }
-
-    if(depth == 1){
-        auto moves = generate_legal_moves(board);
-
-        for(const Move &move : moves){
-            if (move.get_move_type() & static_cast<int>(MoveType::capture)){
-                moves_count.captures += 1;
-            }
-            
-            if (move.get_move_type() == static_cast<int>(MoveType::en_passant_capture)){
-                moves_count.en_pasants += 1;
-            }
-
-            if (move.get_move_type() == static_cast<int>(MoveType::king_castle) || move.get_move_type() == static_cast<int>(MoveType::queen_castle)){
-                moves_count.castles += 1;
-            }
-
-            if (move.get_move_type() & static_cast<int>(MoveType::knight_promotion)){
-                moves_count.promotion += 1;
-            }
-            
-            Board copy = board;
-            make_move(move, copy);
-            if( isKingUnderAttack(copy) ){
-                moves_count.checks += 1;
-            }
-
-            if(isCheckMate(copy)){
-                moves_count.checkmates += 1;
-            }
-        }
-
-        moves_count.count = moves.size();
-
-        return moves_count;
-    }
-    
-    auto moves = generate_legal_moves(board);
-
-    for(const Move &move : moves){
-        Board copy = board;
-        make_move(move, copy);
-
-        PerftMovesCount new_count = perf(depth-1, copy);
-        moves_count.count += new_count.count;
-        moves_count.captures += new_count.captures;
-        moves_count.en_pasants += new_count.en_pasants;
-        moves_count.checks += new_count.checks;
-        moves_count.checkmates += new_count.checkmates;
-        moves_count.castles += new_count.castles;
-        moves_count.promotion += new_count.promotion;
-    }
-
-    return moves_count;
-}
 
 int main(int argc, char const *argv[])
 {
