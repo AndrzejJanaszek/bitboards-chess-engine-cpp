@@ -49,23 +49,6 @@ using U64 = uint64_t;
 // |  15  |     1     |    1    |     1     |     1     | queen-promo capture  |
 // -----------------------------------------------------------------------------
 
-
-void print_bitboard_bits(const U64 &bitboard){
-    // little-endian rank-file mapping
-    std::vector<std::string> str_board(64, "0");
-    
-    // tranform U64 to string (first char is a1 last is h8)
-    for (int  i = 0; i < 64; i++)
-        str_board[i] = ((bitboard & (1ULL << i)) ? "1" : "0");
-
-    print_board_of_strings(str_board);
-
-    std::cout << "bitboard as number: \n";
-    std::cout << "hex: 0x" << std::hex << bitboard << "\n";
-    std::cout << "dec: " << std::dec << bitboard << "ULL\n";
-}
-
-
 //   a b c d e f g h
 // 8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ 
 // 7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟ 
@@ -80,11 +63,6 @@ void print_bitboard_bits(const U64 &bitboard){
 // ************************************
 // *             MAIN
 // ************************************
-
-
-
-
-
 
 int main(int argc, char const *argv[])
 {
