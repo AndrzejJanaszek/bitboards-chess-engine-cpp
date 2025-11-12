@@ -6,50 +6,22 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/gui/gui.exe",
-            "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/gui",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
-            "preLaunchTask": "Build GUI Only",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
+            "preLaunchTask": "CMake Build Project"
         },
         {
             "name": "Debug Engine",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/engine/engine_test.exe",
-            "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/engine",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
-            "preLaunchTask": "Build Engine Test Only",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ],
+            "preLaunchTask": "Configure & Build Engine Test"
         }
     ]
 }
