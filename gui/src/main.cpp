@@ -29,7 +29,7 @@ std::map<char, sf::Texture> loadPieceTextures(const std::string &img_dir_path) {
 
 int main()
 {
-    constexpr unsigned int windowSize = 800;
+    constexpr unsigned int windowSize = 1000;
     constexpr unsigned int boardSize = 8;
     const float squareSize = static_cast<float>(windowSize) / boardSize;
 
@@ -54,7 +54,7 @@ int main()
     
     // std::map<char, texture> pieces_textures
     // key = {'P','R','N','B','Q','K','p','r','n','b','q','k'}
-    auto pieces_textures = loadPieceTextures("img/");
+    std::map<char, sf::Texture> pieces_textures = loadPieceTextures("img/");
 
 
 
@@ -74,7 +74,7 @@ int main()
 
         window.clear();
 
-
+        // rysowanie szachownicy - background
         for (int square = 0; square < 64; square++){
             int row = square / 8;  // dzieląc przez 8 dostajemy numer wiersza
             int col = square % 8;  // reszta z dzielenia daje kolumnę
@@ -86,6 +86,33 @@ int main()
             squareShape.setFillColor(isDark ? darkSquareColor : lightSquareColor);
 
             window.draw(squareShape);
+        }
+
+        // rysowanie figur
+        for (int square = 0; square < 64; ++square) {
+            char square_content = board_position.at(square);
+            if (square_content != '-') {
+                // Obliczamy kolumnę i wiersz z indeksu pola
+                int col = square % 8;
+                int row = 7 - (square / 8); // a1 = 0 w lewym dolnym rogu, więc rząd od dołu
+
+                // Tworzymy sprite i przypisujemy teksturę
+                sf::Sprite sprite(pieces_textures[square_content]);
+
+                // Skaluje sprite do wymiaru pola
+                sf::Vector2u texSize = pieces_textures[square_content].getSize();
+                sprite.setScale(
+                    sf::Vector2f(
+                        squareSize / float(texSize.x),
+                        squareSize / float(texSize.y)
+                ));
+
+                // Ustawiamy pozycję sprite na polu
+                sprite.setPosition(sf::Vector2f(col * squareSize, row * squareSize));
+
+                // Rysujemy sprite w oknie
+                window.draw(sprite);
+            }
         }
 
         window.display();
