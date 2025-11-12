@@ -5,6 +5,8 @@
 #include <map>
 #include <array>
 
+#include "board.hpp"
+
 std::map<char, sf::Texture> loadPieceTextures(const std::string &img_dir_path) {
     std::map<char, sf::Texture> textures;
 

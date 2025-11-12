@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
-project(ChessEngine CXX)
+project(ChessEngine LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Biblioteka logiczna silnika
 add_library(engine
     src/board.cpp
     src/moves.cpp
@@ -15,5 +16,6 @@ add_library(engine
 
 target_include_directories(engine PUBLIC include)
 
+# Testowy plik wykonywalny (opcjonalny)
 add_executable(engine_test src/main.cpp)
 target_link_libraries(engine_test PRIVATE engine)
