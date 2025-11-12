@@ -9,9 +9,7 @@
                 "-S", "${workspaceFolder}",
                 "-B", "${workspaceFolder}/build",
                 "-G", "MinGW Makefiles"
-            ],
-            "problemMatcher": ["$gcc"],
-            "detail": "Configure whole project (engine + gui)"
+            ]
         },
         {
             "label": "CMake Build Project",
@@ -22,33 +20,7 @@
                 "--config", "Debug"
             ],
             "dependsOn": "CMake Configure Project",
-            "group": { "kind": "build", "isDefault": true },
-            "problemMatcher": ["$gcc"],
-            "detail": "Build the entire project"
-        },
-        {
-            "label": "Build Engine Only",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "--build", "${workspaceFolder}/build",
-                "--target", "engine"
-            ],
-            "group": "build",
-            "problemMatcher": ["$gcc"],
-            "detail": "Build only the engine library"
-        },
-        {
-            "label": "Build GUI Only",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "--build", "${workspaceFolder}/build",
-                "--target", "gui"
-            ],
-            "group": "build",
-            "problemMatcher": ["$gcc"],
-            "detail": "Build only the GUI executable"
+            "group": { "kind": "build", "isDefault": true }
         },
         {
             "label": "Build Engine Test Only",
@@ -61,6 +33,12 @@
             "group": "build",
             "problemMatcher": ["$gcc"],
             "detail": "Build only the engine_test executable"
+        },
+        {
+            "label": "Configure & Build Engine Test",
+            "dependsOn": ["CMake Configure Project", "Build Engine Test Only"],
+            "group": "build",
+            "problemMatcher": []
         }
     ]
 }
