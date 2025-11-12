@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "board.h"
+#include "board.hpp"
 
 class Move{
 public:

@@ -1,4 +1,4 @@
-#include "constants.h"
+#include "constants.hpp"
 
 const std::string move_type_str[16] = {
     "quiet_move",

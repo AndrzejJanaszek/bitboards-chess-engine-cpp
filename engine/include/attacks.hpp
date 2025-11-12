@@ -4,7 +4,7 @@
 #include <cstdint>
 
 
-#include "board.h"
+#include "board.hpp"
 
 using U64 = uint64_t;
 

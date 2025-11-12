@@ -1,4 +1,4 @@
-#include "perft.h"
+#include "perft.hpp"
 
 void printPerftObject(PerftMovesCount obj){
     printf("count: %llu, captures: %llu, ep: %llu, castles: %llu, promotion: %llu, checks: %llu, checkmates: %llu\n",
