@@ -1,9 +1,9 @@
 #include <string>
 
-#include "board.h"
-#include "constants.h"
-#include "utility.h"
-#include "visualisation.h"
+#include "board.hpp"
+#include "constants.hpp"
+#include "utility.hpp"
+#include "visualisation.hpp"
 
 
 Board& Board::operator=(const Board &other)

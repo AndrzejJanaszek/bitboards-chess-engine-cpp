@@ -1,7 +1,7 @@
-#include "moves.h"
-#include "constants.h"
-#include "utility.h"
-#include "attacks.h"
+#include "moves.hpp"
+#include "constants.hpp"
+#include "utility.hpp"
+#include "attacks.hpp"
 
 void Move::encode_move(int from_square, int to_square, int piece, MoveType move_type){
     encoded_value = 0;

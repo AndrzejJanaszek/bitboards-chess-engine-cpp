@@ -1,10 +1,10 @@
 #include <iostream>
 #include <random>
 
-#include "attacks.h"
-#include "constants.h"
-#include "attacks.h"
-#include "utility.h"
+#include "attacks.hpp"
+#include "constants.hpp"
+#include "attacks.hpp"
+#include "utility.hpp"
 
 using U64 = uint64_t;
 

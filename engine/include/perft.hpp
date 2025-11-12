@@ -1,8 +1,8 @@
 #pragma once
 #include <iostream>
 
-#include "enums.h"
-#include "moves.h"
+#include "enums.hpp"
+#include "moves.hpp"
 
 struct PerftMovesCount
 {

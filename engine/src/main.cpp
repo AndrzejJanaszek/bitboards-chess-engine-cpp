@@ -8,14 +8,14 @@
 #include <chrono>
 #include <bitset>
 
-#include "attacks.h"
-#include "board.h"
-#include "constants.h"
-#include "enums.h"
-#include "moves.h"
-#include "utility.h"
-#include "visualisation.h"
-#include "perft.h"
+#include "attacks.hpp"
+#include "board.hpp"
+#include "constants.hpp"
+#include "enums.hpp"
+#include "moves.hpp"
+#include "utility.hpp"
+#include "visualisation.hpp"
+#include "perft.hpp"
 
 
 using U64 = uint64_t;

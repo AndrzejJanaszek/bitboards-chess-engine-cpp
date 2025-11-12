@@ -5,7 +5,7 @@
 #include <cstdint>
 
 
-#include "enums.h"
+#include "enums.hpp"
 
 
 using U64 = uint64_t;

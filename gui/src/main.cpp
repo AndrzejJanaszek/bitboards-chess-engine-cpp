@@ -18,7 +18,7 @@ std::map<char, sf::Texture> loadPieceTextures(const std::string &img_dir_path) {
     for (const auto& [key, filename] : filenames) {
         sf::Texture texture;
         if (!texture.loadFromFile(img_dir_path + filename)) {
-            std::cerr << "❌ Failed to load texture: " << filename << std::endl;
+            std::cerr << "Failed to load texture: " << filename << std::endl;
             continue;
         }
         textures[key] = std::move(texture);
@@ -58,11 +58,11 @@ int main()
 
 
 
-    // 🪟 Tworzenie okna (SFML 3)
+    // Tworzenie okna (SFML 3)
     auto window = sf::RenderWindow(sf::VideoMode({windowSize, windowSize}), "Chessboard");
     window.setFramerateLimit(60);
 
-    // 🔁 Główna pętla programu
+    // Główna pętla programu
     while (window.isOpen())
     {
         // Obsługa zdarzeń (SFML 3 -> std::optional)
