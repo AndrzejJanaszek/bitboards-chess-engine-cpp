@@ -2,44 +2,65 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "CMake Configure GUI",
+            "label": "CMake Configure Project",
             "type": "shell",
             "command": "cmake",
             "args": [
-                "-S", "${workspaceFolder}/gui",
-                "-B", "${workspaceFolder}/gui/build",
+                "-S", "${workspaceFolder}",
+                "-B", "${workspaceFolder}/build",
                 "-G", "MinGW Makefiles"
-            ]
+            ],
+            "problemMatcher": ["$gcc"],
+            "detail": "Configure whole project (engine + gui)"
         },
         {
-            "label": "CMake Build GUI",
+            "label": "CMake Build Project",
             "type": "shell",
             "command": "cmake",
             "args": [
-                "--build", "${workspaceFolder}/gui/build"
+                "--build", "${workspaceFolder}/build",
+                "--config", "Debug"
             ],
-            "dependsOn": "CMake Configure GUI",
-            "group": { "kind": "build", "isDefault": true }
+            "dependsOn": "CMake Configure Project",
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": ["$gcc"],
+            "detail": "Build the entire project"
         },
         {
-            "label": "Build Engine",
-            "type": "cppbuild",
-            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "label": "Build Engine Only",
+            "type": "shell",
+            "command": "cmake",
             "args": [
-                "-std=c++20",
-                "-g",
-                "-O0",
-                "-I${workspaceFolder}/engine/include",
-                "${workspaceFolder}/engine/src/*.cpp",
-                "-o",
-                "${workspaceFolder}/engine/build/engine_test.exe"
+                "--build", "${workspaceFolder}/build",
+                "--target", "engine"
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
+            "group": "build",
             "problemMatcher": ["$gcc"],
-            "detail": "Build Engine separately"
+            "detail": "Build only the engine library"
+        },
+        {
+            "label": "Build GUI Only",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "${workspaceFolder}/build",
+                "--target", "gui"
+            ],
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "detail": "Build only the GUI executable"
+        },
+        {
+            "label": "Build Engine Test Only",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "${workspaceFolder}/build",
+                "--target", "engine_test"
+            ],
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "detail": "Build only the engine_test executable"
         }
     ]
 }

@@ -5,27 +5,39 @@
             "name": "Debug GUI",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/gui/build/gui.exe",
+            "program": "${workspaceFolder}/build/gui/gui.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/gui/build",
+            "cwd": "${workspaceFolder}/build/gui",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
-            "preLaunchTask": "CMake Build GUI"
+            "preLaunchTask": "Build GUI Only",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         },
         {
             "name": "Debug Engine",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/engine/build/engine_test.exe",
+            "program": "${workspaceFolder}/build/engine/engine_test.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/engine/build",
-            "environment": [],
+            "cwd": "${workspaceFolder}/build/engine",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+            "preLaunchTask": "Build Engine Test Only",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -38,7 +50,6 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "Build Engine"
         }
     ]
 }
