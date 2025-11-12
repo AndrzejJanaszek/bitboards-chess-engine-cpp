@@ -1,42 +1,29 @@
 {
     "version": "2.0.0",
-    "configurations": [        
+    "configurations": [
         {
             "name": "Debug GUI",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/gui/build/gui.exe",   // exe w katalogu build
+            "program": "${workspaceFolder}/gui/build/gui.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/gui/build",               // katalog roboczy = build
-            "environment": [],
+            "cwd": "${workspaceFolder}/gui/build",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ],
-            "preLaunchTask": "Build GUI with SFML"
+            "preLaunchTask": "CMake Build GUI"
         },
         {
             "name": "Debug Engine",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/engine/build/engine_test.exe",  // <-- plik exe do debugowania
-            "args": [],                              
+            "program": "${workspaceFolder}/engine/build/engine_test.exe",
+            "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/engine/build",  // <-- katalog roboczy
+            "cwd": "${workspaceFolder}/engine/build",
             "environment": [],
-            "externalConsole": true,                  // <-- otwiera osobny terminal
+            "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
             "setupCommands": [
