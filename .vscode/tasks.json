@@ -39,6 +39,24 @@
             "dependsOn": ["CMake Configure Project", "Build Engine Test Only"],
             "group": "build",
             "problemMatcher": []
+        },
+        {
+            "label": "Build Chess Bot Test Only",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "${workspaceFolder}/build",
+                "--target", "chess_bot_test"
+            ],
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "detail": "Build only the chess_bot_test executable"
+        },
+        {
+            "label": "Configure & Build Bot",
+            "dependsOn": ["CMake Configure Project", "Build Chess Bot Test Only"],
+            "group": "build",
+            "problemMatcher": []
         }
     ]
 }

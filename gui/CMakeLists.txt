@@ -13,7 +13,6 @@ set(GUI_SOURCES
 
 add_executable(gui ${GUI_SOURCES})
 
-# ✅ Ścieżki do SFML (naprawione)
 # ${CMAKE_SOURCE_DIR} to główny katalog projektu
 set(SFML_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/SFML-3.0.2/include")
 set(SFML_LIB_DIR "${CMAKE_SOURCE_DIR}/SFML-3.0.2/build/lib")
@@ -33,12 +32,11 @@ target_link_libraries(gui PRIVATE
     imm32
 )
 
-# ✅ Kopiowanie zasobów po kompilacji
+
 add_custom_command(TARGET gui POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${CMAKE_CURRENT_SOURCE_DIR}/src/img"
     $<TARGET_FILE_DIR:gui>/img
 )
 
-# ✅ Dodanie zależności od engine
-target_link_libraries(gui PRIVATE engine)
+target_link_libraries(gui PRIVATE engine chess_bot)
