@@ -22,6 +22,17 @@
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
             "preLaunchTask": "Configure & Build Engine Test"
+        },
+        {
+            "name": "Debug Bot",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/chess_bot/chess_bot_test.exe",
+            "cwd": "${workspaceFolder}/build/chess_bot",
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+            "preLaunchTask": "Configure & Build Bot"
         }
     ]
 }

@@ -8,3 +8,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Dodaj podprojekty
 add_subdirectory(engine)
 add_subdirectory(gui)
+add_subdirectory(chess_bot)
