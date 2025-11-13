@@ -274,3 +274,28 @@ void Board::print_board_ascii(Board &game_state){
 
     print_board_of_strings(pieces);
 }
+
+std::array<char, 64> Board::board_to_char_array()
+{
+    std::array<char, 64> arr{};
+    arr.fill('-'); // wypełniamy domyślnie pustym polem
+
+    // iterujemy po wszystkich typach figur (12 bitboardów)
+    for (int bitboard_index = 0; bitboard_index < 12; bitboard_index++)
+    {
+        U64 piece_bitboard = bitboards[bitboard_index];
+
+        while (piece_bitboard)
+        {
+            int square_number = get_LS1B(piece_bitboard);
+
+            // przypisujemy odpowiedni znak ASCII do pola
+            arr[square_number] = ascii_pieces[bitboard_index];
+
+            // usuwamy LS1B
+            piece_bitboard &= (piece_bitboard - 1);
+        }
+    }
+
+    return arr;
+}
