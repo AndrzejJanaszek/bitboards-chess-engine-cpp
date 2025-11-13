@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 #include <cstdint>
 
 
@@ -47,4 +48,6 @@ public:
     void print_board_unicode();
 
     void print_board_ascii(Board &game_state);
+
+    std::array<char, 64> board_to_char_array();
 };
