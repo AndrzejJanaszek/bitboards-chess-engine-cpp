@@ -603,8 +603,9 @@ void make_move(Move move, Board &board){
         // rook
         const int rook_target_square = (move.get_from_square() + move.get_to_square())/2;
         const int rook_from_square = board.color_to_move ? static_cast<int>(SQUARE::h8) : static_cast<int>(SQUARE::h1);
+        // const int rook_from_color = board.color_to_move ? static_cast<int>(SQUARE::h8) : static_cast<int>(SQUARE::h1);
         // remove rook
-        board.bitboards[rook_from_square] &= ~(1ULL << move.get_from_square());
+        board.bitboards[static_cast<int>(PIECE::R) + (board.color_to_move*6)] &= ~(1ULL << rook_from_square);
         //set rook
         board.bitboards[static_cast<int>(PIECE::R) + (board.color_to_move*6)] |= 1ULL << rook_target_square;
 
@@ -623,7 +624,7 @@ void make_move(Move move, Board &board){
         const int rook_target_square = (move.get_from_square() + move.get_to_square())/2;
         const int rook_from_square = board.color_to_move ? static_cast<int>(SQUARE::a8) : static_cast<int>(SQUARE::a1);
         // remove rook
-        board.bitboards[rook_from_square] &= ~(1ULL << move.get_from_square());
+        board.bitboards[static_cast<int>(PIECE::R) + (board.color_to_move*6)] &= ~(1ULL << rook_from_square);
         //set rook
         board.bitboards[static_cast<int>(PIECE::R) + (board.color_to_move*6)] |= 1ULL << rook_target_square;
 
