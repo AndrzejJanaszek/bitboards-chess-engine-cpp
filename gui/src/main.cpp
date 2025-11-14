@@ -10,6 +10,7 @@
 #include "utility.hpp"
 #include "moves.hpp"
 #include <chess_bot.hpp>
+#include <visualisation.hpp>
 
 std::map<char, sf::Texture> loadPieceTextures(const std::string &img_dir_path) {
     std::map<char, sf::Texture> textures;
@@ -57,22 +58,13 @@ int main()
 
     Board board;
     init_all_lookup_tables(board);
-    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    board.load_fen("rnbqkbnr/pppppppp/8/8/PPPPPPPP/PPPPPPPP/8/R3K2R w KQkq - 0 1");
 
 
     // std::array<char, 64> board_position
     // 'P','R','N','B','Q','K','p','r','n','b','q','k','-'
 
-    std::array<char, 64> board_position = {
-        'R','N','B','Q','K','B','N','R',  // 1. rząd (a1-h1)
-        'P','P','P','P','P','P','P','P',  // 2. rząd (a2-h2)
-        '-','-','-','-','-','-','-','-',  // 3. rząd
-        '-','-','-','-','-','-','-','-',  // 4. rząd
-        '-','-','-','-','-','-','-','-',  // 5. rząd
-        '-','-','-','-','-','-','-','-',  // 6. rząd
-        'p','p','p','p','p','p','p','p',  // 7. rząd (a7-h7)
-        'r','n','b','q','k','b','n','r'   // 8. rząd (a8-h8)
-    };
+    std::array<char, 64> board_position = board.board_to_char_array();
 
     
     // std::map<char, texture> pieces_textures
@@ -118,6 +110,7 @@ int main()
                             if(move.get_from_square() == active_square && move.get_to_square() == current_square){
                                 // make move
                                 make_move(move, board);
+
                                 legal_moves = generate_legal_moves(board);
                                 board_position = board.board_to_char_array();
 
@@ -125,6 +118,7 @@ int main()
                                 possible_squares.clear();
                                 active_square = -1;
                                 current_square = -1;
+
                                 continue;
                             }
                         }
@@ -140,27 +134,12 @@ int main()
                         }
                     }
 
-
-                    // U64 attacks = queen_attacks(active_square, board);
-                    
-                    // possible_squares.clear();
-                    // while(attacks){
-                    //     possible_squares.push_back(get_LS1B(attacks));
-                    //     pop_bit(attacks);
-                    // }
-                    
                     active_square = current_square;
                 }
             }
         }
 
         window.clear();
-
-        if(board.color_to_move == 1){
-            Move best_move = get_best_move(board, 5).second;
-            make_move(best_move, board);
-            board_position = board.board_to_char_array();
-        }
 
         // rysowanie szachownicy - background
         for (int square = 0; square < 64; square++){
@@ -219,9 +198,14 @@ int main()
             window.draw(squareShape);
         }
 
-        
-
         window.display();
+
+        if(board.color_to_move == 1){
+            Move best_move = get_best_move(board, 3).second;
+            best_move.print();
+            make_move(best_move, board);
+            board_position = board.board_to_char_array();
+        }
     }
 
     return 0;
