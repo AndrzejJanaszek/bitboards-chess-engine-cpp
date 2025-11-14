@@ -42,6 +42,7 @@ void make_move(Move move, Board &board);
 
 std::vector<Move> generate_legal_moves(Board &game_state);
 
-bool isKingUnderAttack(Board &board);
+// bool isKingUnderAttack(Board &board);
+bool isKingUnderAttack(Board &board, bool other_side = false);
 
 bool isCheckMate(Board &board);

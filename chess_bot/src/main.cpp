@@ -6,6 +6,7 @@
 #include <attacks.hpp>
 #include <utility.hpp>
 #include <constants.hpp>
+#include <moves.hpp>
 
 //todo zmienić nazwy plików .hpp, dodać namespace i ogarnać sprawę includeów
 
@@ -65,6 +66,82 @@ int eval(Board& board){
     return evaluation_result;
 }
 
+ 
+
+
+std::pair<int, Move> get_best_move(Board& board, int depth){
+    bool success = false;
+    std::pair<int, Move> best_move;
+    best_move.first = (board.color_to_move - 0.5)*9999999;
+
+    auto moves = generate_moves(board);
+
+    if(depth == 1){
+
+        for(Move& move : moves){
+            Board copy_board = board;
+
+            make_move(move, copy_board);
+
+            // isLegal
+            if(!isKingUnderAttack(copy_board, true)){
+                int e = eval(copy_board);
+
+                // if white better or black better move
+                if ((board.color_to_move == static_cast<int>(COLOR::white) && e > best_move.first) ||
+                    (board.color_to_move == static_cast<int>(COLOR::black) && e < best_move.first)){
+                    best_move = std::pair<int, Move>(e, move);
+                    success = true;
+                }
+            }
+        }
+
+        // if no legal moves
+        if(success == false){
+            //checkmate
+            if(!isCheckMate(board)){
+                // stale mate
+                // board.print_board_ascii(board);
+                // throw std::runtime_error("No legal moves!");
+                best_move.first = 0;
+            }
+        }
+
+        return best_move;
+    }
+    
+    for(Move& move : moves){
+        Board copy_board = board;
+
+        make_move(move, copy_board);
+
+        // isLegal
+        if(!isKingUnderAttack(copy_board, true)){
+            int e = get_best_move(copy_board, depth-1).first;
+
+            // if white better or black better move
+            if ((board.color_to_move == static_cast<int>(COLOR::white) && e > best_move.first) ||
+                (board.color_to_move == static_cast<int>(COLOR::black) && e < best_move.first)){
+                best_move = std::pair<int, Move>(e, move);
+                success = true;
+            }
+        }
+
+        // if no legal moves
+        if(success == false){
+            //checkmate
+            if(!isCheckMate(board)){
+                // stale mate
+                // board.print_board_ascii(board);
+                // throw std::runtime_error("No legal moves!");
+                best_move.first = 0;
+            }
+        }
+    }
+
+    return best_move;
+}
+
 int main(int argc, char const *argv[])
 {
     std::cout << "Dziala\n";
@@ -72,8 +149,20 @@ int main(int argc, char const *argv[])
     Board board;
     init_all_lookup_tables(board);
 
-    board.load_fen("r1bqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
-    printf("fen 1: %d\n", eval(board));
+    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    // printf("fen 1: %d\n", eval(board));
+
+    for(int i = 1; i < 20; i++){
+        printf("%d: ", i);
+        get_best_move(board, i).second.print();
+    }
+
+
+    // auto moves = generate_legal_moves(board);
+
+    // for(Move& m : moves){
+    //     m.print();
+    // }
 
     // board.load_fen("4k3/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
     // printf("fen 2: %d\n", eval(board));
