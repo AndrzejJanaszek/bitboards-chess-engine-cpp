@@ -9,6 +9,7 @@
 #include "attacks.hpp"
 #include "utility.hpp"
 #include "moves.hpp"
+#include <chess_bot.hpp>
 
 std::map<char, sf::Texture> loadPieceTextures(const std::string &img_dir_path) {
     std::map<char, sf::Texture> textures;
@@ -32,6 +33,12 @@ std::map<char, sf::Texture> loadPieceTextures(const std::string &img_dir_path) {
     return textures;
 }
 
+
+// todo poprawić logikę całościowo dla gui
+
+// todo naprawić silnik bo po roszadzie zostaje wieża a ta która przeskakuje nad królem jest kwantowa
+// można ją zbić samemu -> pewnie jest i jako czarna i jako białą???
+
 int main()
 {
     constexpr unsigned int windowSize = 1000;
@@ -52,7 +59,6 @@ int main()
     init_all_lookup_tables(board);
     board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    auto legal_moves = generate_legal_moves(board);
 
     // std::array<char, 64> board_position
     // 'P','R','N','B','Q','K','p','r','n','b','q','k','-'
@@ -92,6 +98,7 @@ int main()
             {
                 if (mouseButtonPressed->button == sf::Mouse::Button::Left)
                 {
+                    
                     std::cout << "the Left button was pressed" << std::endl;
                     std::cout << "mouse x: " << mouseButtonPressed->position.x << std::endl;
                     std::cout << "mouse y: " << mouseButtonPressed->position.y << std::endl;
@@ -103,6 +110,8 @@ int main()
                     int ry = 8 - my / squareSize;
 
                     int current_square = rx + 8*ry;
+
+                    auto legal_moves = generate_legal_moves(board);
 
                     if(possible_moves.size() > 0){
                         for(Move& move : possible_moves){
@@ -146,6 +155,12 @@ int main()
         }
 
         window.clear();
+
+        if(board.color_to_move == 1){
+            Move best_move = get_best_move(board, 5).second;
+            make_move(best_move, board);
+            board_position = board.board_to_char_array();
+        }
 
         // rysowanie szachownicy - background
         for (int square = 0; square < 64; square++){
@@ -203,6 +218,8 @@ int main()
 
             window.draw(squareShape);
         }
+
+        
 
         window.display();
     }
