@@ -117,8 +117,8 @@ std::pair<int, Move> get_best_move(Board& board, int depth){
                 success = true;
             }
         }
-
-        // if no legal moves
+    }
+    // if no legal moves
         if(success == false){
             //checkmate
             if(!isCheckMate(board)){
@@ -128,7 +128,6 @@ std::pair<int, Move> get_best_move(Board& board, int depth){
                 best_move.first = 0;
             }
         }
-    }
 
     return best_move;
 }

@@ -430,7 +430,7 @@ void make_move(Move move, Board &board){
         // white
         board.castles &= 0b0011;
     }
-    else if(move.get_piece() == static_cast<int>(PIECE::K)){
+    else if(move.get_piece() == static_cast<int>(PIECE::k)){
         // black
         board.castles &= 0b1100;
     }
@@ -609,6 +609,12 @@ void make_move(Move move, Board &board){
         //set rook
         board.bitboards[static_cast<int>(PIECE::R) + (board.color_to_move*6)] |= 1ULL << rook_target_square;
 
+        // UPDATE OCCUPANCIES [COLOR] | FOR ROOK
+        // remove rook
+        board.color_occupancy_bitboards[board.color_to_move] &= ~( 1ULL << rook_from_square); 
+        //set rook
+        board.color_occupancy_bitboards[board.color_to_move] |= 1ULL << rook_target_square;
+
         // castle rights updated at the start of function
     }
 
@@ -627,6 +633,12 @@ void make_move(Move move, Board &board){
         board.bitboards[static_cast<int>(PIECE::R) + (board.color_to_move*6)] &= ~(1ULL << rook_from_square);
         //set rook
         board.bitboards[static_cast<int>(PIECE::R) + (board.color_to_move*6)] |= 1ULL << rook_target_square;
+
+        // UPDATE OCCUPANCIES [COLOR] | FOR ROOK
+        // remove rook
+        board.color_occupancy_bitboards[board.color_to_move] &= ~( 1ULL << rook_from_square); 
+        //set rook
+        board.color_occupancy_bitboards[board.color_to_move] |= 1ULL << rook_target_square;
 
         // castle rights updated at the start of function
     }

@@ -1,3 +1,6 @@
+#pragma once
+
+
 inline constexpr int PAWN_WHITE_PSQT[64] = {
       0,   0,   0,   0,   0,   0,   0,   0,
      50,  50,  50,  50,  50,  50,  50,  50,
