@@ -58,7 +58,7 @@ int main()
 
     Board board;
     init_all_lookup_tables(board);
-    board.load_fen("rnbqkbnr/pppppppp/8/8/PPPPPPPP/PPPPPPPP/8/R3K2R w KQkq - 0 1");
+    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
 
     // std::array<char, 64> board_position
@@ -201,8 +201,8 @@ int main()
         window.display();
 
         if(board.color_to_move == 1){
-            Move best_move = get_best_move(board, 3).second;
-            best_move.print();
+            Move best_move = get_best_move(board, 4).second;
+            // best_move.print();
             make_move(best_move, board);
             board_position = board.board_to_char_array();
         }
