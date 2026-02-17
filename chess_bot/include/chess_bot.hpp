@@ -6,5 +6,5 @@
 #include <pieces_weights.hpp>
 
 int eval(Board& board);
-
-std::pair<int, Move> get_best_move(Board& board, int depth);
+int minmax(Board& board, int depth);
+Move get_best_move(Board& board, int depth);

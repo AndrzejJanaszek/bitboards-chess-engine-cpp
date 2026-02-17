@@ -201,7 +201,7 @@ int main()
         window.display();
 
         if(board.color_to_move == 1){
-            Move best_move = get_best_move(board, 4).second;
+            Move best_move = get_best_move(board, 4);
             // best_move.print();
             make_move(best_move, board);
             board_position = board.board_to_char_array();

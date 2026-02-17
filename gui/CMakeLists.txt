@@ -20,9 +20,9 @@ set(SFML_LIB_DIR "${CMAKE_SOURCE_DIR}/SFML-3.0.2/build/lib")
 target_include_directories(gui PRIVATE ${SFML_INCLUDE_DIR})
 
 target_link_libraries(gui PRIVATE
-    "${SFML_LIB_DIR}/libsfml-graphics-s.a"
-    "${SFML_LIB_DIR}/libsfml-window-s.a"
-    "${SFML_LIB_DIR}/libsfml-system-s.a"
+    "${SFML_LIB_DIR}/libsfml-graphics-s-d.a"
+    "${SFML_LIB_DIR}/libsfml-window-s-d.a"
+    "${SFML_LIB_DIR}/libsfml-system-s-d.a"
     gdi32
     winmm
     opengl32
