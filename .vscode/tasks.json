@@ -1,6 +1,7 @@
 {
     "version": "2.0.0",
     "tasks": [
+        // -------- SFML DEBUG --------
         {
             "label": "Configure SFML Debug",
             "type": "shell",
@@ -24,7 +25,7 @@
             "group": "build"
         },
 
-        
+        // -------- SFML RELEASE --------
         {
             "label": "Configure SFML Release",
             "type": "shell",
@@ -49,34 +50,61 @@
         },
 
 
+
+        // -------- PROJECT DEBUG --------
         {
-            "label": "CMake Configure Project",
+            "label": "CMake Configure Project Debug",
             "type": "shell",
             "command": "cmake",
             "args": [
                 "-S", "${workspaceFolder}",
-                "-B", "${workspaceFolder}/build",
+                "-B", "${workspaceFolder}/build-debug",
                 "-G", "MinGW Makefiles",
                 "-DCMAKE_BUILD_TYPE=Debug"
             ]
         },
         {
-            "label": "CMake Build Project",
+            "label": "CMake Build Project Debug",
             "type": "shell",
             "command": "cmake",
             "args": [
-                "--build", "${workspaceFolder}/build",
-                "--config", "Debug"
+                "--build", "${workspaceFolder}/build-debug"
             ],
-            "dependsOn": "CMake Configure Project",
+            "dependsOn": ["CMake Configure Project Debug"],
             "group": { "kind": "build", "isDefault": true }
         },
+
+        // -------- PROJECT RELEASE --------
+        {
+            "label": "CMake Configure Project Release",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S", "${workspaceFolder}",
+                "-B", "${workspaceFolder}/build-release",
+                "-G", "MinGW Makefiles",
+                "-DCMAKE_BUILD_TYPE=Release"
+            ]
+        },
+        {
+            "label": "CMake Build Project Release",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "${workspaceFolder}/build-release"
+            ],
+            "dependsOn": ["CMake Configure Project Release"],
+            "group": "build"
+        },
+
+
+
         {
             "label": "Build Engine Test Only",
             "type": "shell",
             "command": "cmake",
             "args": [
-                "--build", "${workspaceFolder}/build",
+                "--build", "${workspaceFolder}/build-debug",
                 "--target", "engine_test"
             ],
             "group": "build",
@@ -94,7 +122,7 @@
             "type": "shell",
             "command": "cmake",
             "args": [
-                "--build", "${workspaceFolder}/build",
+                "--build", "${workspaceFolder}/build-debug",
                 "--target", "chess_bot_test"
             ],
             "group": "build",

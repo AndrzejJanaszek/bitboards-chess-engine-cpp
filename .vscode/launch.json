@@ -1,7 +1,7 @@
 {
     "version": "2.0.0",
     "configurations": [
-        // ---- SFML Debug ----
+        //* ---- SFML Debug ----
         {
             "name": "Build SFML Debug",
             "type": "cppdbg",
@@ -12,7 +12,7 @@
             "internalConsoleOptions": "neverOpen"
         },
 
-        // ---- SFML Release ----
+        //* ---- SFML Release ----
         {
             "name": "Build SFML Release",
             "type": "cppdbg",
@@ -22,23 +22,39 @@
             "preLaunchTask": "Build SFML Release",
             "internalConsoleOptions": "neverOpen"
         },
+
+
+        //* ---- PROJECT RELEASE ----
+        {
+            "name": "Release GUI",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-release/gui/gui.exe",
+            "cwd": "${workspaceFolder}/build-release/gui",
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+            "preLaunchTask": "CMake Build Project Release"
+        },
+
+        //* ---- PROJECT DEBUG ----
         {
             "name": "Debug GUI",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/gui/gui.exe",
-            "cwd": "${workspaceFolder}/build/gui",
+            "program": "${workspaceFolder}/build-debug/gui/gui.exe",
+            "cwd": "${workspaceFolder}/build-debug/gui",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
-            "preLaunchTask": "CMake Build Project"
+            "preLaunchTask": "CMake Build Project Debug"
         },
         {
             "name": "Debug Engine",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/engine/engine_test.exe",
-            "cwd": "${workspaceFolder}/build/engine",
+            "program": "${workspaceFolder}/build-debug/engine/engine_test.exe",
+            "cwd": "${workspaceFolder}/build-debug/engine",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
@@ -48,8 +64,8 @@
             "name": "Debug Bot",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/chess_bot/chess_bot_test.exe",
-            "cwd": "${workspaceFolder}/build/chess_bot",
+            "program": "${workspaceFolder}/build-debug/chess_bot/chess_bot_test.exe",
+            "cwd": "${workspaceFolder}/build-debug/chess_bot",
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
