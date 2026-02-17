@@ -110,7 +110,6 @@ int minmax(Board& board, int depth){
 // beta -> mini
 int minmax_alpha_beta(Board& board, int depth, int alpha, int beta){
     if(depth == 0){
-        // board.print_board_ascii(board);
         if(isCheckMate(board)){
             return board.color_to_move == static_cast<int>(COLOR::white) ? INT_MIN : INT_MAX;
         }
