@@ -4,3 +4,5 @@
 
 *.exe
 build/
+build-debug/
+build-release/

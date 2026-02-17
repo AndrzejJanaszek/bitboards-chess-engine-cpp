@@ -15,7 +15,7 @@ add_executable(gui ${GUI_SOURCES})
 
 # ${CMAKE_SOURCE_DIR} to główny katalog projektu
 set(SFML_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/SFML-3.0.2/include")
-set(SFML_LIB_DIR "${CMAKE_SOURCE_DIR}/SFML-3.0.2/build/lib")
+set(SFML_LIB_DIR "${CMAKE_SOURCE_DIR}/SFML-3.0.2/build-debug/lib")
 
 target_include_directories(gui PRIVATE ${SFML_INCLUDE_DIR})
 

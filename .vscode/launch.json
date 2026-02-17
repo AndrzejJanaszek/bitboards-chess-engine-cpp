@@ -1,6 +1,27 @@
 {
     "version": "2.0.0",
     "configurations": [
+        // ---- SFML Debug ----
+        {
+            "name": "Build SFML Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "cmd.exe",
+            "args": ["/c", "echo Building SFML Debug..."],
+            "preLaunchTask": "Build SFML Debug",
+            "internalConsoleOptions": "neverOpen"
+        },
+
+        // ---- SFML Release ----
+        {
+            "name": "Build SFML Release",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "cmd.exe",
+            "args": ["/c", "echo Building SFML Release..."],
+            "preLaunchTask": "Build SFML Release",
+            "internalConsoleOptions": "neverOpen"
+        },
         {
             "name": "Debug GUI",
             "type": "cppdbg",

@@ -2,6 +2,54 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Configure SFML Debug",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S", "${workspaceFolder}/SFML-3.0.2",
+                "-B", "${workspaceFolder}/SFML-3.0.2/build-debug",
+                "-G", "MinGW Makefiles",
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "-DBUILD_SHARED_LIBS=OFF"
+            ]
+        },
+        {
+            "label": "Build SFML Debug",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "${workspaceFolder}/SFML-3.0.2/build-debug"
+            ],
+            "dependsOn": "Configure SFML Debug",
+            "group": "build"
+        },
+
+        
+        {
+            "label": "Configure SFML Release",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S", "${workspaceFolder}/SFML-3.0.2",
+                "-B", "${workspaceFolder}/SFML-3.0.2/build-release",
+                "-G", "MinGW Makefiles",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DBUILD_SHARED_LIBS=OFF"
+            ]
+        },
+        {
+            "label": "Build SFML Release",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "${workspaceFolder}/SFML-3.0.2/build-release"
+            ],
+            "dependsOn": "Configure SFML Release",
+            "group": "build"
+        },
+
+
+        {
             "label": "CMake Configure Project",
             "type": "shell",
             "command": "cmake",
