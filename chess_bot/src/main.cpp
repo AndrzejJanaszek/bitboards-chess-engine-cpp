@@ -19,13 +19,13 @@ int main(int argc, char const *argv[])
     Board board;
     init_all_lookup_tables(board);
 
-    // board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     // board.load_fen("k7/8/8/8/3r1n2/4P3/8/K7 w - - 0 1");    // bicie wierzy e3xd4
-    board.load_fen("k7/7R/8/8/8/8/6R1/K7 w - - 0 1");    // mat w 1
+    // board.load_fen("k7/7R/8/8/8/8/6R1/K7 w - - 0 1");    // mat w 1
 
     // printf("fen 1: %d\n", eval(board));
 
-    for(int i = 0; i < 5; i++){
+    for(int i = 0; i < 10; i++){
         printf("%d: ", i);
         get_best_move(board, i).print();
     }

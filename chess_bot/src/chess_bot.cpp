@@ -106,22 +106,97 @@ int minmax(Board& board, int depth){
     return best_eval;
 }
 
+// alpha -> maxi
+// beta -> mini
+int minmax_alpha_beta(Board& board, int depth, int alpha, int beta){
+    if(depth == 0){
+        // board.print_board_ascii(board);
+        if(isCheckMate(board)){
+            return board.color_to_move == static_cast<int>(COLOR::white) ? INT_MIN : INT_MAX;
+        }
+
+        return eval(board);
+    }
+    
+    int best_eval = board.color_to_move == static_cast<int>(COLOR::white) ? INT_MIN : INT_MAX;
+    bool success = false;
+
+    auto moves = generate_moves(board);
+
+    for(Move& move : moves){
+        Board copy_board = board;
+        make_move(move, copy_board);
+
+        // isLegal
+        if(!isKingUnderAttack(copy_board, true)){
+            int e = minmax_alpha_beta(copy_board, depth-1, alpha, beta);
+
+            // check for better evaluation (better than best_eval)
+            if(board.color_to_move == static_cast<int>(COLOR::white)){
+                best_eval = std::max(best_eval, e);
+                alpha = std::max(alpha, e);
+                success = true;
+            }
+            else{
+                
+                best_eval = std::min(best_eval, e);
+                beta = std::min(beta, e);
+                success = true;
+            }
+
+            if(alpha >= beta)
+                break;
+        }
+    }
+
+    // if no legal moves
+    if(success == false){
+        //checkmate
+        if(!isCheckMate(board)){
+            // stale mate
+            // board.print_board_ascii(board);
+            // throw std::runtime_error("No legal moves!");
+            return 0;
+        }
+
+        // white or black win (max value for white, min value for black)
+        // return board.color_to_move == static_cast<int>(COLOR::white) ? INT_MAX : INT_MIN;
+        return best_eval;
+    }
+
+    return best_eval;
+}
+
+
 Move get_best_move(Board& board, int depth){
     auto moves = generate_moves(board);
     int best_eval = board.color_to_move == static_cast<int>(COLOR::white) ? INT_MIN : INT_MAX;
     Move best_move;
+
+    int alpha = INT_MIN;
+    int beta = INT_MAX;
 
     // find best move
     for(Move& move : moves){
         Board copy_board = board;
         make_move(move, copy_board);
 
-        int e = minmax(copy_board, depth);
+        int e = minmax_alpha_beta(copy_board, depth, alpha, beta);
+        // int e = minmax(copy_board, depth);
         
-        if ((board.color_to_move == static_cast<int>(COLOR::white) && e > best_eval) ||
-            (board.color_to_move == static_cast<int>(COLOR::black) && e < best_eval)){
+        if(board.color_to_move == static_cast<int>(COLOR::white) && e > alpha){
+            // if( e > alpha)
+            alpha = e;
+
+            // best_eval = e;
             best_move = move;
-            best_eval = e;
+        }
+        else if(board.color_to_move == static_cast<int>(COLOR::black) && e < beta){
+            // if( e < beta)
+            beta = e;
+
+            // best_eval = e;
+            best_move = move;
         }
     }
 
