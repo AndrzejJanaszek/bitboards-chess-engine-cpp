@@ -8,6 +8,8 @@
 #include <constants.hpp>
 #include <moves.hpp>
 
+#include "chess_bot.hpp"
+
 //todo zmienić nazwy plików .hpp, dodać namespace i ogarnać sprawę includeów
 
 int eval(Board& board){
@@ -158,6 +160,7 @@ int main(int argc, char const *argv[])
         printf("%d: ", i);
         get_best_move(board, i).print();
     }
+    // get_best_move(board, 2).second.print();
 
 
     // auto moves = generate_legal_moves(board);

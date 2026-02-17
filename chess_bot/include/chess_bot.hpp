@@ -1,3 +1,5 @@
+#pragma once
+
 #include <board.hpp>
 #include <moves.hpp>
 #include <utility.hpp>
