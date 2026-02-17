@@ -66,76 +66,75 @@ int eval(Board& board){
     return evaluation_result;
 }
 
- 
 
+int minmax(Board& board, int depth){
+    if(depth == 0){
+        // board.print_board_ascii(board);
+        if(isCheckMate(board)){
+            return board.color_to_move == static_cast<int>(COLOR::white) ? INT_MIN : INT_MAX;
+        }
 
-std::pair<int, Move> get_best_move(Board& board, int depth){
+        return eval(board);
+    }
+    
+    int best_eval = board.color_to_move == static_cast<int>(COLOR::white) ? INT_MIN : INT_MAX;
     bool success = false;
-    std::pair<int, Move> best_move;
-    best_move.first = (board.color_to_move - 0.5)*9999999;
 
     auto moves = generate_moves(board);
 
-    if(depth == 1){
-
-        for(Move& move : moves){
-            Board copy_board = board;
-
-            make_move(move, copy_board);
-
-            // isLegal
-            if(!isKingUnderAttack(copy_board, true)){
-                int e = eval(copy_board);
-
-                // if white better or black better move
-                if ((board.color_to_move == static_cast<int>(COLOR::white) && e > best_move.first) ||
-                    (board.color_to_move == static_cast<int>(COLOR::black) && e < best_move.first)){
-                    best_move = std::pair<int, Move>(e, move);
-                    success = true;
-                }
-            }
-        }
-
-        // if no legal moves
-        if(success == false){
-            //checkmate
-            if(!isCheckMate(board)){
-                // stale mate
-                // board.print_board_ascii(board);
-                // throw std::runtime_error("No legal moves!");
-                best_move.first = 0;
-            }
-        }
-
-        return best_move;
-    }
-    
     for(Move& move : moves){
         Board copy_board = board;
-
         make_move(move, copy_board);
 
         // isLegal
         if(!isKingUnderAttack(copy_board, true)){
-            int e = get_best_move(copy_board, depth-1).first;
+            int e = minmax(copy_board, depth-1);
 
-            // if white better or black better move
-            if ((board.color_to_move == static_cast<int>(COLOR::white) && e > best_move.first) ||
-                (board.color_to_move == static_cast<int>(COLOR::black) && e < best_move.first)){
-                best_move = std::pair<int, Move>(e, move);
+            // check for better evaluation (better than best_eval)
+            if ((board.color_to_move == static_cast<int>(COLOR::white) && e > best_eval) ||
+                (board.color_to_move == static_cast<int>(COLOR::black) && e < best_eval)){
+                best_eval = e;
                 success = true;
             }
         }
+    }
 
-        // if no legal moves
-        if(success == false){
-            //checkmate
-            if(!isCheckMate(board)){
-                // stale mate
-                // board.print_board_ascii(board);
-                // throw std::runtime_error("No legal moves!");
-                best_move.first = 0;
-            }
+    // if no legal moves
+    if(success == false){
+        //checkmate
+        if(!isCheckMate(board)){
+            // stale mate
+            // board.print_board_ascii(board);
+            // throw std::runtime_error("No legal moves!");
+            return 0;
+        }
+
+        // white or black win (max value for white, min value for black)
+        // return board.color_to_move == static_cast<int>(COLOR::white) ? INT_MAX : INT_MIN;
+        return best_eval;
+    }
+
+    return best_eval;
+}
+
+
+
+Move get_best_move(Board& board, int depth){
+    auto moves = generate_moves(board);
+    int best_eval = board.color_to_move == static_cast<int>(COLOR::white) ? INT_MIN : INT_MAX;
+    Move best_move;
+
+    // find best move
+    for(Move& move : moves){
+        Board copy_board = board;
+        make_move(move, copy_board);
+
+        int e = minmax(copy_board, depth);
+        
+        if ((board.color_to_move == static_cast<int>(COLOR::white) && e > best_eval) ||
+            (board.color_to_move == static_cast<int>(COLOR::black) && e < best_eval)){
+            best_move = move;
+            best_eval = e;
         }
     }
 
@@ -149,12 +148,15 @@ int main(int argc, char const *argv[])
     Board board;
     init_all_lookup_tables(board);
 
-    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    // board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    // board.load_fen("k7/8/8/8/3r1n2/4P3/8/K7 w - - 0 1");    // bicie wierzy e3xd4
+    board.load_fen("k7/7R/8/8/8/8/6R1/K7 w - - 0 1");    // mat w 1
+
     // printf("fen 1: %d\n", eval(board));
 
-    for(int i = 1; i < 20; i++){
+    for(int i = 0; i < 5; i++){
         printf("%d: ", i);
-        get_best_move(board, i).second.print();
+        get_best_move(board, i).print();
     }
 
 
